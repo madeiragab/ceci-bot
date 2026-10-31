@@ -1,0 +1,11 @@
+# prévias de trabalho do pipeline
+_preview/
+# configurações locais do usuário (posição, tamanho...)
+config/
+# Python
+__pycache__/
+*.pyc
+# build do executável
+build/
+dist/
+*.spec
