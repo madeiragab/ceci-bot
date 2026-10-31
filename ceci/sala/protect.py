@@ -25,10 +25,10 @@ def _blob(data):
     return _Blob(len(data), ctypes.cast(buf, ctypes.POINTER(ctypes.c_char))), buf
 
 
-def _dpapi(data, protect):
+def _dpapi(data, protect, entropy=ENTROPY):
     c32 = ctypes.windll.crypt32
     src, _keep1 = _blob(data)
-    ent, _keep2 = _blob(ENTROPY)
+    ent, _keep2 = _blob(entropy)
     out = _Blob()
     fn = c32.CryptProtectData if protect else c32.CryptUnprotectData
     if not fn(ctypes.byref(src), None, ctypes.byref(ent), None, None, 0x1, ctypes.byref(out)):  # UI_FORBIDDEN

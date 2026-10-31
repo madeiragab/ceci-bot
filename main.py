@@ -66,7 +66,7 @@ class App:
         self.sala.progress.connect(self._sala_progress)
         self.sala.finished.connect(self._sala_finished)
         self.sala.alerts.connect(self._sala_alerts)
-        self.ai = Assistant(make_provider(self.s["ai_provider"]), self.sala.store, self.s, clock=self.sala.now)
+        self.ai = Assistant(make_provider(self.s["ai_provider"], self.s["ai_chain"]), self.sala.store, self.s, clock=self.sala.now)
         self.ai.state.connect(self._ai_state)
         self.ai.answered.connect(lambda a: self._say(a["anim"], a["balloons"]))
         self.ai.failed.connect(lambda f: self._say(f["anim"], f["say"]))

@@ -6,10 +6,11 @@ class AIError(Exception):
     """Falha do provedor. `kind` decide o que a Ceci fala; `partial` guarda o que chegou antes de cortar."""
     KINDS = ("indisponivel", "sessao", "conexao", "timeout", "vazia", "incompleta", "cancelada", "limite", "falha")
 
-    def __init__(self, kind, message="", partial=""):
+    def __init__(self, kind, message="", partial="", wait=None):
         super().__init__(message or kind)
         self.kind = kind if kind in self.KINDS else "falha"
         self.partial = partial
+        self.wait = wait        # "limite": segundos até o serviço aceitar de novo, quando ele informa
 
 
 @dataclass
@@ -19,6 +20,8 @@ class Prompt:
     history: list = field(default_factory=list)  # [(papel, texto)] recentes e curtos: "user" | "ceci"
     new_session: bool = True    # True: o provedor precisa receber a personalidade de novo (início ou reinício)
     session_id: str = None      # conversa do provedor que deve continuar (quando ele guarda a conversa)
+    transcript: str = ""        # a conversa atual em markdown: vai inteira quando outra IA assume
+    last_provider: str = None   # quem respondeu a anterior ("serviço/modelo")
 
 
 @dataclass
@@ -26,6 +29,7 @@ class Reply:
     text: str
     complete: bool = True       # False: a resposta chegou cortada
     session_id: str = None      # conversa do provedor, para continuar na próxima
+    provider: str = None        # quem respondeu ("serviço/modelo")
 
 
 class AIProvider:

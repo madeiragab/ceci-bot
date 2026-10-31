@@ -14,7 +14,7 @@ KEEP = 400          # mensagens guardadas no histórico
 RECENT = 8          # mensagens que vão para o modelo
 RECENT_CHARS = 600  # cada uma, no máximo
 STATE = {"session_id": None, "last_topic": None, "last_keys": [], "last_module": None, "last_at": None,
-         "personality_key": None}
+         "personality_key": None, "provider": None}
 
 
 class Conversation:
@@ -44,7 +44,7 @@ class Conversation:
         self.save()
         return m
 
-    def recent(self):
+    def recent(self, n=RECENT, chars=RECENT_CHARS):
         """Últimas trocas da conversa atual, curtas, sem mensagens de erro (o que o modelo precisa para seguir)."""
         out = []
         for m in reversed(self.messages):
@@ -52,9 +52,9 @@ class Conversation:
                 break  # começo da conversa atual
             if m.get("error") or m.get("route") == "local":
                 continue
-            t = m["text"] if len(m["text"]) <= RECENT_CHARS else m["text"][:RECENT_CHARS - 1] + "…"
+            t = m["text"] if len(m["text"]) <= chars else m["text"][:chars - 1] + "…"
             out.append((m["role"], t))
-            if len(out) >= RECENT:
+            if len(out) >= n:
                 break
         return out[::-1]
 
@@ -64,7 +64,7 @@ class Conversation:
 
     def new_session(self, note="Nova conversa"):
         """Esquece o contexto (e a conversa do provedor), mas mantém o histórico na janela."""
-        self.state.update(session_id=None, last_topic=None, last_keys=[], last_module=None)
+        self.state.update(session_id=None, last_topic=None, last_keys=[], last_module=None, provider=None)
         self.add("sistema", note)
 
     def clear(self):

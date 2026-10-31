@@ -28,7 +28,8 @@ DEFAULTS = {
     "speech_freq": 1.0,      # frequência das falas automáticas
     "start_pos": "bottom_right",  # bottom_right | bottom_left | saved
     "pos": None,             # [x, y] do ponto dos pés (lógico)
-    "ai_provider": "gemini_web",  # provedor da IA (ceci/ia/__init__.py: PROVIDERS)
+    "ai_provider": "corrente",  # provedor da IA (ceci/ia/__init__.py: PROVIDERS)
+    "ai_chain": None,        # ordem da corrente: ["serviço/modelo", ...]; None = a padrão (ceci/ia/chain.py)
     "ai_academic": None,     # pode mandar o recorte das atividades para a IA? None = ainda não perguntou
 }
 
@@ -41,6 +42,8 @@ class Settings(dict):
                 self.update({k: v for k, v in json.load(f).items() if k in DEFAULTS})
         except (OSError, ValueError):
             pass
+        if self["ai_provider"] == "gemini_web":  # bloqueado pelos termos (Fase 3); a corrente de APIs substitui
+            self["ai_provider"] = "corrente"
 
     def save(self):
         os.makedirs(CONFIG_DIR, exist_ok=True)

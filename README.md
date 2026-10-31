@@ -211,6 +211,7 @@ python tests/spin_test.py     # girar/sacudir no ar tem falas próprias; arrasta
 python tests/interact_test.py # clique = Interagir, carinho passando o mouse, sentada na barra, uma Ceci só
 python tests/sala_test.py     # Sala Virtual: os 18 cenários obrigatórios com um Moodle falso local
 python tests/sala_app_test.py # a Ceci reage à consulta com as animações e falas certas
+python tests/chain_test.py    # corrente de provedores com servidor falso
 python tests/ia_test.py       # IA: roteador, contexto, dados, falhas e animações com um provedor falso
 ```
 

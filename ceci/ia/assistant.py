@@ -14,12 +14,12 @@ from .provider import AIError
 
 FAIL = {
     "indisponivel": "Ainda não tenho uma IA conectada pra conversar. Os comandos funcionam: digita \"ajuda\".",
-    "sessao": "A sessão da IA expirou. Preciso que você entre de novo nela.",
+    "sessao": "A chave da IA foi recusada. Confere em botão direito → Abrir chat → Chaves.",
     "conexao": "Puta merda, a conexão com a IA caiu. Digita \"tenta de novo\" que eu mando outra vez.",
     "timeout": "A IA demorou demais e eu desisti de esperar. \"tenta de novo\"?",
     "vazia": "A IA me devolveu um nada. KKKKK. \"tenta de novo\"?",
     "incompleta": "A resposta veio cortada. \"tenta de novo\" pede outra.",
-    "limite": "Bati no limite de uso da IA por enquanto. Tenta mais tarde.",
+    "limite": "Todas as IAs que eu tenho bateram no limite por enquanto. Tenta mais tarde.",
     "falha": "Deu ruim aqui com a IA. \"tenta de novo\"?",
     "cancelada": "Beleza, deixei essa pra lá.",
 }
@@ -119,6 +119,9 @@ class Assistant(QObject):
         new = self.conv.state["session_id"] is None or self.conv.state["personality_key"] != pkey
         history = self.conv.recent()[:-1]  # a mensagem atual vai em prompt.message
         prompt = prompts.build(system, history, text, ctx, new, self.conv.state["session_id"])
+        # se outra IA assumir, ela recebe a conversa inteira em markdown (ChainProvider decide)
+        prompt.transcript = prompts.markdown(self.conv.recent(prompts.TRANSCRIPT, prompts.TRANSCRIPT_CHARS)[:-1])
+        prompt.last_provider = self.conv.state["provider"]
         self.busy, self.retry_text = text, None
         self.job += 1
         meta = {"job": self.job, "text": text, "route": r.kind, "keys": keys, "ctx": ctx, "pkey": pkey}
@@ -147,9 +150,9 @@ class Assistant(QObject):
             if err.kind == "incompleta" and err.partial.strip():
                 return self._answer(meta, err.partial, False, None)
             return self._fail(err, meta["text"], meta["route"])
-        self._answer(meta, reply.text, reply.complete, reply.session_id)
+        self._answer(meta, reply.text, reply.complete, reply.session_id, reply.provider)
 
-    def _answer(self, meta, raw, complete, session_id):
+    def _answer(self, meta, raw, complete, session_id, provider=None):
         text, mood = prompts.parse(raw)
         if not text:
             return self._fail(AIError("vazia"), meta["text"], meta["route"])
@@ -157,8 +160,10 @@ class Assistant(QObject):
         if not complete:
             balloons.append(FAIL["incompleta"])
             self.retry_text = meta["text"]
-        self.conv.add("ceci", text, route=meta["route"], mood=mood, complete=complete)
+        self.conv.add("ceci", text, route=meta["route"], mood=mood, complete=complete, provider=provider)
         keep = {"last_keys": meta["keys"], "last_module": meta["ctx"]} if meta["keys"] is not None else {}
+        if provider:
+            keep["provider"] = provider
         self.conv.remember(session_id=session_id, last_topic=meta["route"], personality_key=meta["pkey"], **keep)
         self.changed.emit()
         self.answered.emit({"text": text, "balloons": balloons, "truncated": cut, "mood": mood,
