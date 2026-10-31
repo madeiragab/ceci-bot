@@ -26,8 +26,8 @@ FAIL = {
 }
 SLOW = 1200  # ms até "pensando" virar "processando"
 FILE_TYPES = (".txt", ".md", ".markdown")
-FILE_BYTES = 2_000_000
-FILE_CHARS = 12000  # do arquivo vai pra IA até isso (cabe no limite por minuto dos planos grátis)
+FILE_BYTES = 50_000_000
+FILE_CHARS = 100_000  # do arquivo vai pra IA até isso (~30 mil tokens: o Gemini aguenta; o Groq passa a vez)
 
 
 class Assistant(QObject):
@@ -216,7 +216,7 @@ class Assistant(QObject):
             return self._say("negando", [f"Só leio .txt e .md por enquanto. Esse \"{name}\" eu não abro."])
         try:
             if os.path.getsize(path) > FILE_BYTES:
-                return self._say("negando", [f"Esse \"{name}\" é grande demais pra mim, porra. Até 2 MB."])
+                return self._say("negando", [f"Esse \"{name}\" é grande demais pra mim, porra. Até 50 MB."])
             with open(path, "rb") as fh:
                 raw = fh.read()
         except OSError:

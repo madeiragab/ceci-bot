@@ -176,12 +176,12 @@ calls = len(fake2.calls)
 ai.attach(pdf)
 check("arquivo: outro tipo é recusado sem mandar nada", len(fake2.calls) == calls and ".txt e .md" in said[-1])
 big = os.path.join(TMP, "grande.txt")
-open(big, "w", encoding="utf8").write("a" * 30000)
+open(big, "w", encoding="utf8").write("a" * 130000)
 fake2.replies[:] = ["[neutra] Grande pra caralho."]
 ai.attach(big)
 wait(lambda: len(fake2.calls) > calls)
 check("arquivo grande: só o começo vai, e a IA sabe que foi cortado",
-      "30000 caracteres" in fake2.calls[-1].message and "a" * 12001 not in fake2.calls[-1].message)
+      "130000 caracteres" in fake2.calls[-1].message and "a" * 100001 not in fake2.calls[-1].message)
 check("etiqueta de humor em qualquer lugar/formato vira animação e some do texto",
       prompts.parse("*[curiosa]* Cecinha?") == ("Cecinha?", "curiosa")
       and prompts.parse("Opa, porra! [feliz]") == ("Opa, porra!", "feliz")

@@ -113,7 +113,7 @@
 - Fala automática: a da IA primeiro (cada uma uma vez), falas.json de reserva. Rotina: vontades pesam 3x.
 - Conversa: o modelo recebe data e hora do PC; ação de roleplay na resposta (*bebe café*, *boceja*, *Bowie...*)
   escolhe a animação (prompts.ACTIONS), senão o humor.
-- Arquivos .txt/.md: arrastar em cima dela ou "Anexar" no chat; até 2 MB, 12 mil caracteres vão pra IA entre
+- Arquivos .txt/.md: arrastar em cima dela ou "Anexar" no chat; até 50 MB, 100 mil caracteres vão pra IA entre
   <arquivo> (dado, não instrução), ficam na conversa até "nova conversa". Testado: README lido e comentado.
 - Testado de verdade: lote gerado em 13–34 s, 30 situações/69 falas, reagiu a "sábado à noite".
   `tests/live_test.py` (19) com provedor falso.
