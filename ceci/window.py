@@ -28,6 +28,7 @@ class CeciWindow(QWidget):
     moved = Signal()
     interaction = Signal(str)  # clique, carinho, arrastada, girando, solta, tonta, acordando, olhando (falas)
     double_clicked = Signal()  # clique duplo nela: caixinha para digitar
+    files_dropped = Signal(list)  # arquivos soltos em cima dela (caminhos)
 
     def __init__(self, settings):
         super().__init__(None)
@@ -36,6 +37,7 @@ class CeciWindow(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setMouseTracking(True)
+        self.setAcceptDrops(True)
         self.setWindowTitle("Ceci")
 
         screen = QGuiApplication.primaryScreen()
@@ -520,6 +522,16 @@ class CeciWindow(QWidget):
         if not self.exiting and not self.dragging:
             self.interaction.emit("clique")
             self.interact()
+
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasUrls() and not self.exiting:
+            e.acceptProposedAction()
+
+    def dropEvent(self, e):
+        paths = [u.toLocalFile() for u in e.mimeData().urls() if u.isLocalFile()]
+        if paths:
+            e.acceptProposedAction()
+            self.files_dropped.emit(paths)
 
     def mouseDoubleClickEvent(self, e):
         if e.button() != Qt.LeftButton or self.exiting or not self._hit(e.position()):

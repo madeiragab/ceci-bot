@@ -65,6 +65,7 @@ class App:
         self.speech.bubble.ended.connect(self._release_hold)
         self.win.context_menu.connect(self._menu)
         self.win.double_clicked.connect(self.ask)
+        self.win.files_dropped.connect(self.drop_files)
         self.sala = SalaVirtual(is_fullscreen=fullscreen_app_active)
         self.sala.progress.connect(self._sala_progress)
         self.sala.finished.connect(self._sala_finished)
@@ -191,6 +192,12 @@ class App:
         box.submitted.connect(self.command)
         box.destroyed.connect(lambda *_: self.box is box and setattr(self, "box", None))
         box.show_beside(self.win.foot, self.win.sprites.scale, self.win.area())
+
+    def drop_files(self, paths):
+        """Arquivo solto em cima dela: ela lê (só .txt e .md) e comenta."""
+        self.beh.user_activity()
+        self.speech.cut()
+        self.ai.attach(paths[0])
 
     def command(self, text):
         self.speech.cut()  # o que você digitou tem prioridade sobre o que ela estava falando

@@ -6,7 +6,7 @@ Fechar a janela não apaga nada. Respostas longas aparecem completas aqui, mesmo
 import html
 import time
 
-from PySide6.QtWidgets import (QDialog, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton,
+from PySide6.QtWidgets import (QDialog, QFileDialog, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton,
                                QTextBrowser, QVBoxLayout, QWidget)
 
 from ..sala.ui import QSS
@@ -38,6 +38,7 @@ class ChatWindow(QWidget):
         self.setWindowTitle("Chat com a Ceci")
         self.setStyleSheet(QSS)
         self.resize(460, 600)
+        self.setAcceptDrops(True)  # arrastar .txt/.md pra janela também manda pra ela
         v = QVBoxLayout(self)
         self.status = QLabel("")
         self.status.setObjectName("muted")
@@ -59,7 +60,8 @@ class ChatWindow(QWidget):
         row.addWidget(b)
         v.addLayout(row)
         row = QHBoxLayout()
-        for label, fn in (("Nova conversa", ai.reset), ("Apagar histórico", self._clear), ("Chaves", self._keys)):
+        for label, fn in (("Nova conversa", ai.reset), ("Apagar histórico", self._clear), ("Chaves", self._keys),
+                          ("Anexar .txt/.md", self._attach)):
             b = QPushButton(label)
             b.clicked.connect(fn)
             row.addWidget(b)
@@ -73,6 +75,22 @@ class ChatWindow(QWidget):
         self.input.clear()
         if t:
             self.send(t)
+
+    def _attach(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Mandar arquivo pra Ceci", "", "Texto (*.txt *.md *.markdown)")
+        if path:
+            self.ai.attach(path, self.input.text().strip() or None)
+            self.input.clear()
+
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasUrls():
+            e.acceptProposedAction()
+
+    def dropEvent(self, e):
+        paths = [u.toLocalFile() for u in e.mimeData().urls() if u.isLocalFile()]
+        if paths:
+            self.ai.attach(paths[0], self.input.text().strip() or None)
+            self.input.clear()
 
     def _keys(self):
         KeysDialog(self.ai.provider, self).exec()

@@ -1,6 +1,7 @@
 """Orquestra a conversa: roteia, junta personalidade + contexto + dados, chama o provedor numa thread e
 devolve a resposta pronta para o balão. O texto do modelo nunca é executado: comandos só pelo roteador.
 """
+import os
 import threading
 import time
 
@@ -24,6 +25,9 @@ FAIL = {
     "cancelada": "Beleza, deixei essa pra lá.",
 }
 SLOW = 1200  # ms até "pensando" virar "processando"
+FILE_TYPES = (".txt", ".md", ".markdown")
+FILE_BYTES = 2_000_000
+FILE_CHARS = 12000  # do arquivo vai pra IA até isso (cabe no limite por minuto dos planos grátis)
 
 
 class Assistant(QObject):
@@ -122,6 +126,10 @@ class Assistant(QObject):
         # se outra IA assumir, ela recebe a conversa inteira em markdown (ChainProvider decide)
         prompt.transcript = prompts.markdown(self.conv.recent(prompts.TRANSCRIPT, prompts.TRANSCRIPT_CHARS)[:-1])
         prompt.last_provider = self.conv.state["provider"]
+        f = self.conv.state.get("file")
+        if f:  # arquivo que o usuário mandou: vai junto até a próxima "nova conversa" ou outro arquivo
+            cut = f"Ele tem {f['size']} caracteres; você recebeu só os primeiros {len(f['text'])}." if f["cut"] else ""
+            prompt.message = prompts.FILE.format(name=f["name"], text=f["text"], cut=cut) + "\n\n" + prompt.message
         self.busy, self.retry_text = text, None
         self.job += 1
         meta = {"job": self.job, "text": text, "route": r.kind, "keys": keys, "ctx": ctx, "pkey": pkey}
@@ -199,6 +207,36 @@ class Assistant(QObject):
         self.conv.add("ceci", "\n".join(lines), route="local")
         self.changed.emit()
         self.speak.emit(anim, lines)
+
+    # --- arquivos ---
+    def attach(self, path, question=None):
+        """Arquivo .txt/.md que o usuário entregou (arrastado nela ou "Anexar" no chat): lê e manda pra IA."""
+        name = os.path.basename(path)
+        if os.path.splitext(name)[1].lower() not in FILE_TYPES:
+            return self._say("negando", [f"Só leio .txt e .md por enquanto. Esse \"{name}\" eu não abro."])
+        try:
+            if os.path.getsize(path) > FILE_BYTES:
+                return self._say("negando", [f"Esse \"{name}\" é grande demais pra mim, porra. Até 2 MB."])
+            with open(path, "rb") as fh:
+                raw = fh.read()
+        except OSError:
+            return self._say("confusa", [f"Não consegui abrir o \"{name}\"."])
+        for enc in ("utf-8-sig", "cp1252", "latin-1"):
+            try:
+                text = raw.decode(enc)
+                break
+            except UnicodeDecodeError:
+                continue
+        text = text.replace("\r\n", "\n").strip()
+        if not text:
+            return self._say("confusa", [f"O \"{name}\" tá vazio. Cê me mandou um nada, KKKKK."])
+        self.conv.remember(file={"name": name, "text": text[:FILE_CHARS], "size": len(text),
+                                 "cut": len(text) > FILE_CHARS})
+        self.conv.add("user", f"📄 {name}", route="arquivo", file=name)
+        self.changed.emit()
+        q = question or "Lê esse arquivo que eu te mandei e me fala o que achou: do que se trata e o que chama atenção."
+        self.state.emit("atencao")
+        self.ask(q, router.Route("conversa", "", q))
 
     # --- controle ---
     def cancel(self):
