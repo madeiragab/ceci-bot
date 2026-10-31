@@ -314,7 +314,7 @@ log = open(LOG, encoding="utf8").read() if os.path.exists(LOG) else ""
 check("log sem sesskey, cookie nem token", log and not any(s in log for s in (SESSKEY, SESSION, TOKEN, PASSWORD)))
 
 # o que ela fala quando você pergunta (menu ou caixinha), com os dados salvos
-from ceci.command import parse  # noqa: E402
+from ceci.ia.router import route  # noqa: E402
 from ceci.sala import texts  # noqa: E402
 from ceci.sala.ui import SalaDialog  # noqa: E402
 said = texts.answer(store, "atividades", T0)
@@ -324,10 +324,11 @@ check("\"atividades\" diz quantas e fala nome, disciplina e prazo de cada uma", 
 check("\"resumo\" fala hoje, semana e atrasadas", said and texts.answer(store, "resumo", T0)[0].startswith("Hoje vence"))
 check("sem nenhuma consulta ela diz que ainda não conferiu",
       texts.answer(Store(os.path.join(tempfile.mkdtemp(), "v.db")), "atividades", T0)[0].startswith("Ainda não conferi"))
-check("caixinha entende as palavras (sem IA)",
-      [parse(t)[0] for t in ("atividades", "o que vence hoje?", "atividades atrasadas", "próxima entrega", "resumo",
-                             "conferir", "fiz lista 3", "não fiz lista 3", "qual a capital da frança")]
-      == ["atividades", "hoje", "atrasadas", "prazo", "resumo", "conferir", "fiz", "desfazer", "?"])
+check("caixinha: comandos registrados viram ação local; perguntas e conversa não",
+      [tuple(route(t)[:2]) for t in ("atividades", "o que vence hoje?", "atrasadas", "próxima entrega", "resumo",
+                                     "conferir", "fiz lista 3", "não fiz lista 3", "qual a capital da frança")]
+      == [("local", "atividades"), ("academico", ""), ("local", "atrasadas"), ("local", "prazo"),
+          ("local", "resumo"), ("local", "conferir"), ("local", "fiz"), ("local", "desfazer"), ("conversa", "")])
 check("\"fiz\" acha a atividade pelo pedaço do nome, sem acento",
       [r["key"] for r in texts.find(store, texts.norm(todo[0]["name"]).upper(), T0)] == [todo[0]["key"]])
 SalaDialog(sala).show()

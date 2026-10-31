@@ -28,6 +28,8 @@ DEFAULTS = {
     "speech_freq": 1.0,      # frequência das falas automáticas
     "start_pos": "bottom_right",  # bottom_right | bottom_left | saved
     "pos": None,             # [x, y] do ponto dos pés (lógico)
+    "ai_provider": "gemini_web",  # provedor da IA (ceci/ia/__init__.py: PROVIDERS)
+    "ai_academic": None,     # pode mandar o recorte das atividades para a IA? None = ainda não perguntou
 }
 
 

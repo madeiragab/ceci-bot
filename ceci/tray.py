@@ -24,6 +24,7 @@ def build_menu(app, tray=False):
         m.addAction("Minhas atividades", app.tell_activities)
         m.addAction("Resumo da faculdade", app.tell_summary)
         m.addAction("Conferir Sala Virtual agora", app.check_sala)
+        m.addAction("Abrir chat", app.open_chat)
         m.addSeparator()
     pause = QAction("Pausar animações", m, checkable=True, checked=app.win.player.paused)
     pause.toggled.connect(app.set_paused)

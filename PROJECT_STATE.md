@@ -1,4 +1,4 @@
-# Ceci Bot — Estado do projeto (Fases 1 e 2)
+# Ceci Bot — Estado do projeto (Fases 1, 2 e 3)
 
 ## Implementado
 - Análise das 55 spritesheets: `tools/NOTES_sheets.md`.
@@ -105,6 +105,55 @@
   por eixo (5 idas e vindas ≥ 30 px no mesmo eixo) e espera 450 ms: clicou nesse meio-tempo, vale o clique.
   Arraste só começa com um puxão (> 22 px) ou segurando 0,25 s e mexendo > 6 px; antes 6 px bastavam e um
   clique tremido (ou toque no touchpad) levantava a Ceci.
+
+## Fase 3 — IA da Ceci (31/10)
+
+### Gemini Web: avaliado, NÃO conectado
+- `gemini.google.com/robots.txt` (lido em 31/10): `User-agent: *`, `Disallow: /app/`, `Disallow: /chat/` — as
+  páginas do chat estão fechadas para acesso automatizado. Os Termos de Serviço do Google tratam como abuso o
+  acesso automatizado que desrespeita essas instruções. Playwright ou uma extensão digitando na página são esse
+  acesso; os outros caminhos (endpoints internos, cookies copiados, disfarçar o navegador) foram proibidos no pedido.
+- Por isso `ceci/ia/gemini_web.py` responde `is_available() = (False, motivo)` e nada é automatizado.
+  Nenhuma API paga foi colocada no lugar (precisa de autorização do usuário).
+
+### Implementado (`ceci/ia/`, independente do provedor)
+- `provider.py`: `AIProvider` (`send_message`, `reset_session`, `cancel`, `is_available`, `close`), `Prompt`,
+  `Reply`, `AIError` (indisponivel, sessao, conexao, timeout, vazia, incompleta, cancelada, limite, falha).
+  Trocar de provedor = registrar em `PROVIDERS` e mudar `ai_provider` no settings.json.
+- `personality.py`: lê `ceci_personality.txt` (cópia em `%APPDATA%\Ceci Bot` tem prioridade), relê quando o
+  arquivo muda e reaplica numa sessão nova; junta as regras do app (etiqueta de humor, dados = dados, sem romance).
+- `router.py`: comando local só com frase registrada inteira (abre as configurações, mostra minhas atividades,
+  fica quietinha, vai dormir, abre a atividade de X, abre o chat, para, tenta de novo, nova conversa...);
+  pergunta acadêmica (palavras fortes, ou fracas como "prazo/prova" só quando é sobre você ou com data);
+  acompanhamento curto ("e qual delas vence primeiro?") depois de assunto acadêmico; o resto é conversa.
+- `academic.py`: recorte do SQLite da Sala Virtual por pergunta (hoje, amanhã, semana, atrasadas, próxima,
+  cronograma, disciplina citada, conjunto anterior), no máximo 15 atividades, descrição só quando pedem ajuda com
+  uma atividade; última sincronização, completa ou não, desatualizado.
+- `context.py`: histórico em `%APPDATA%\Ceci Bot\conversa.json`; para o modelo vão só as 8 últimas mensagens
+  (600 caracteres cada), último assunto, atividades citadas, id da sessão do provedor.
+- `prompts.py`: mensagem acadêmica no formato pedido, dados entre `<dados_sala_virtual>`; etiqueta de humor →
+  animação (feliz, curiosa, explicando, assustada, confusa, triste, brava, negando, chamando, aprovado,
+  conversando), adivinhada pelo texto quando falta; até 5 balões, o resto fica no chat.
+- `assistant.py`: thread de trabalho (interface não trava), um envio por vez (duplicado ignorado), cancelamento
+  ("para"), watchdog de tempo, resposta cortada mostrada com aviso, falha guarda a mensagem ("tenta de novo"),
+  permissão antes de mandar dados acadêmicos (uma vez, salva em `ai_academic`), sem IA: perguntas acadêmicas
+  respondidas com os dados locais e conversa diz que não há IA conectada.
+- `chat.py`: botão direito → Abrir chat (mesma conversa, histórico completo, Nova conversa, Apagar histórico).
+- Animações: mensagem → Observando; esperando → Pensando (0,7 s depois) e Processando (1,2 s); resposta →
+  pelo humor, ou Mostrando tarefa / Prazo urgente quando há atividade (urgente = menos de 24 h); falha → Erro.
+- Caixinha igual (barrinha sem moldura, 260 px, transparente); o texto do modelo nunca é executado.
+
+### Testado de verdade (Fase 3)
+- `tests/ia_test.py` (42) com provedor falso e Moodle falso: os itens 1–14 do pedido (conversa, personalidade,
+  comando local sem IA, pergunta acadêmica com permissão e só o recorte, acompanhamento, sem histórico,
+  reabrir o chat, sessão reiniciada, falha de conexão + tenta de novo, sem dados, desatualizado, cancelamento,
+  caixinha preservada, animações) + duplicado, resposta cortada/vazia, personalidade relida, texto do modelo não
+  executa comando, sem cookie/sesskey/token no envio, Gemini Web indisponível com motivo.
+- 15. .exe parado (31/10, 60 s depois de 30 s aberto): 0,26 % de CPU do total (8 núcleos), 79 MB de working set,
+  35 MB privado, 0 processos filhos, 0 conexões.
+
+### Não verificado ainda (Fase 3)
+- Nenhuma conversa com IA de verdade: não há provedor permitido conectado.
 
 ## Fase 2 — Sala Virtual (31/10)
 

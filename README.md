@@ -88,6 +88,12 @@ O que ela não entende, ela diz que não entendeu. No menu, **Minhas atividades*
 
 Dados locais: `%APPDATA%\Ceci Bot\sala_virtual.db` (SQLite), `sala_virtual.sessao` (cifrado) e `sala_virtual.log` (sem cookies, chaves nem senhas). **Desconectar e apagar sessão** apaga a sessão e encerra o login no Moodle.
 
+## 🧠 IA da Ceci (Fase 3)
+
+A barrinha do clique duplo passa por um roteador: **comando registrado** (ex.: "mostra minhas atividades", "abre as configurações", "fica quietinha", "vai dormir", "abre a atividade de Pesquisa Operacional", "abre o chat") roda na hora, sem IA. **Pergunta sobre as atividades** ("tenho atividade amanhã?") vai para a IA junto com só o recorte certo do banco da Sala Virtual, depois de você autorizar uma vez. **O resto** é conversa com a personalidade de `assets/ceci_personality.txt`. A animação muda de acordo com a resposta. O histórico completo fica em botão direito → **Abrir chat**.
+
+**Situação do provedor**: o Gemini Web **não está conectado**. O `robots.txt` do gemini.google.com fecha as páginas do chat para automação e os Termos do Google tratam esse acesso como abuso, então a Ceci não automatiza a página. O núcleo funciona com qualquer provedor que implemente `AIProvider` (`ceci/ia/provider.py`). Sem provedor, os comandos continuam, perguntas sobre atividades são respondidas com os dados locais e a conversa avisa que não há IA conectada.
+
 ## 🖼️ Galeria
 
 <p align="center">
@@ -205,6 +211,7 @@ python tests/spin_test.py     # girar/sacudir no ar tem falas próprias; arrasta
 python tests/interact_test.py # clique = Interagir, carinho passando o mouse, sentada na barra, uma Ceci só
 python tests/sala_test.py     # Sala Virtual: os 18 cenários obrigatórios com um Moodle falso local
 python tests/sala_app_test.py # a Ceci reage à consulta com as animações e falas certas
+python tests/ia_test.py       # IA: roteador, contexto, dados, falhas e animações com um provedor falso
 ```
 
 Os testes da Sala Virtual usam um Moodle de mentira em `127.0.0.1` (`tests/fake_moodle.py`) com dados fictícios. Nenhuma conta real é usada.
@@ -231,7 +238,8 @@ Quando a Ceci é ocultada, os timers param. O modo econômico desliga a respira�
 main.py              # app: início, menu, bandeja, tela cheia, fechar animado
 ceci/                # engine, janela, rotina, sprites, configurações, UI
 ceci/sala/           # Sala Virtual: login, leitura do Moodle, SQLite, lembretes, falas
-ceci/command.py      # caixinha do clique duplo (palavras-chave, sem IA)
+ceci/command.py      # caixinha do clique duplo
+ceci/ia/             # IA: roteador, personalidade, contexto, dados da Sala Virtual, provedor, chat
 assets/              # sprites recortados, frames.json, animations.json, falas.json, ícone
 assetsoriginal/      # spritesheets originais (fundo magenta)
 tools/               # pipeline de sprites, manifesto e build do .exe

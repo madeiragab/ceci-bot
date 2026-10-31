@@ -110,7 +110,7 @@ app.speech.bubble.stop()
 app.speech.queue = []
 said.clear()
 app.command("qual a capital da frança")
-check("caixinha: o que ela não entende, ela diz (não inventa)", any(t and t.startswith("Não entendi") for _, t in said))
+check("caixinha: conversa sem IA conectada, ela diz (não inventa)", any(t and "não tenho uma IA" in t for _, t in said))
 app.ask()
 QCoreApplication.processEvents()
 check("clique duplo abre a caixinha", app.box is not None and app.box.isVisible())

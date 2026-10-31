@@ -3,13 +3,17 @@ import ctypes
 import os
 import random
 import sys
+import time
 
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QSystemTrayIcon
 
 from ceci.behavior import Behavior
-from ceci.command import HELP, CommandBox, parse
+from ceci.command import HELP, CommandBox
+from ceci.ia import make_provider
+from ceci.ia.assistant import Assistant
+from ceci.ia.chat import ChatWindow
 from ceci.sala import texts
 from ceci.sala.service import SalaVirtual
 from ceci.sala.store import deadline, status
@@ -62,10 +66,16 @@ class App:
         self.sala.progress.connect(self._sala_progress)
         self.sala.finished.connect(self._sala_finished)
         self.sala.alerts.connect(self._sala_alerts)
+        self.ai = Assistant(make_provider(self.s["ai_provider"]), self.sala.store, self.s, clock=self.sala.now)
+        self.ai.state.connect(self._ai_state)
+        self.ai.answered.connect(lambda a: self._say(a["anim"], a["balloons"]))
+        self.ai.failed.connect(lambda f: self._say(f["anim"], f["say"]))
+        self.ai.speak.connect(self._say)
+        self.ai.local.connect(self.run_local)
         self.tray = Tray(self, ICON)
         self.tray.messageClicked.connect(self._toast_clicked)
         self.toast_url, self.toast_action = None, self.tell_activities
-        self.panel = self.dlg = self.sala_dlg = self.box = None
+        self.panel = self.dlg = self.sala_dlg = self.box = self.chat_win = None
         self.fs_paused = False
         self.fs_timer = QTimer(timeout=self._check_fullscreen)
         self._update_fs_timer()
@@ -160,8 +170,27 @@ class App:
         box.show_beside(self.win.foot, self.win.sprites.scale, self.win.area())
 
     def command(self, text):
-        action, rest = parse(text)
         self.speech.cut()  # o que você digitou tem prioridade sobre o que ela estava falando
+        self.ai.handle(text)  # roteador: comando local, pergunta com dados da Sala Virtual ou conversa
+
+    def _ai_state(self, st):
+        """Mensagem recebida → Observando; esperando a IA → Pensando e, se demorar, Processando."""
+        if st == "pensando":  # deixa ver ela prestando atenção antes de começar a pensar
+            return QTimer.singleShot(700, lambda: self.ai.busy and self._ai_anim("pensando"))
+        self._ai_anim("observando" if st == "atencao" else "processando")
+
+    def _ai_anim(self, aid):
+        w = self.win
+        if w.isVisible() and not w.player.paused and not w.exiting and not w.dragging:
+            w.stop_walk()
+            self.speech.muted = aid  # nada de fala automática da animação no meio da conversa
+            w.play(aid, force=True, **({} if aid == "observando" else {"loops": "inf"}))
+
+    def open_chat(self):
+        self._open("chat_win", lambda: ChatWindow(self.ai, self.command))
+
+    def run_local(self, action, rest):
+        """Comandos registrados (o roteador só manda frase que bate inteira com o padrão)."""
         now = self.sala.now()
         if action in ("atividades", "prazo", "hoje", "amanha", "semana", "atrasadas"):
             self.tell(action, "prazo" if action == "atrasadas" else "tarefa")
@@ -177,16 +206,40 @@ class App:
             self.stroll()
         elif action == "falar":
             self.chat()
-        elif action == "oi":
-            self.interact()
         elif action == "esconder":
             self.hide_ceci()
         elif action == "configuracoes":
             self.open_settings()
+        elif action == "chat":
+            self.open_chat()
+        elif action == "quieta":
+            self.speech.last_auto = time.monotonic() + 1800  # sem falas automáticas por meia hora
+            self._say(None, ["Tá bom, fico quietinha por meia hora."])
+        elif action == "dormir":
+            self.win.stop_walk()
+            self.win.play("cochilo", force=True)
+        elif action == "acordar":
+            self.win.wake()
+        elif action == "abrir_atividade":
+            self._open_activity(rest, now)
         elif action == "ajuda":
             self._say(None, HELP)
+
+    def _open_activity(self, rest, now):
+        rows = [dict(r) for r in self.sala.store.rows()
+                if status(r, now) in ("pendente", "desconhecido", "atrasada") and r["url"]]
+        q = texts.norm(rest)
+        found = ([r for r in rows if q and q in texts.norm(texts.spoken_course(r))]
+                 or [r for r in rows if q and q in texts.norm(r["name"])])
+        if len(found) == 1:
+            open_url(found[0]["url"])  # abre no seu navegador, com a sua sessão do Moodle
+            self._say("tarefa", [f"Abrindo \"{texts.name(found[0], 50)}\" no navegador."])
+        elif not found:
+            self._say("confusa", [f"Não achei atividade a fazer de \"{rest[:40]}\"."])
         else:
-            self._say("confusa", [f"Não entendi \"{rest[:40]}\". Não tenho IA, só umas palavras. Digita \"ajuda\"."])
+            found.sort(key=lambda r: deadline(r) or 9e12)
+            self._say(None, [f"Tem {len(found)}: " + "; ".join(texts.name(r, 40) for r in found[:4])
+                             + ". Fala um pedaço do nome (\"abre a atividade de\" + nome)."])
 
     def _mark(self, rest, on, now):
         if not rest:
@@ -347,6 +400,7 @@ class App:
         self.beh.stop()
         self.fs_timer.stop()
         self.sala.shutdown()
+        self.ai.close()
         w.player.set_paused(False)
         w.eyes_off()
         w.save_pos()
