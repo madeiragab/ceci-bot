@@ -1,8 +1,10 @@
-"""Textos montados com os dados locais (sem IA): linha de cada atividade, falas de aviso e o Resumo da faculdade."""
-import html
+"""Textos montados com os dados locais (sem IA): falas de aviso e as respostas sobre as atividades."""
+import re
+import unicodedata
+
 
 from .clock import local, stamp, when, left
-from .store import DEADLINE_LABEL, KIND_LABEL, STATUS_LABEL, deadline, deadline_field, status
+from .store import DEADLINE_LABEL, KIND_LABEL, deadline, deadline_field, status
 
 TODO = ("atrasada", "pendente", "desconhecido", "sem_prazo", "evento")
 SORT = {"atrasada": 0, "pendente": 1, "desconhecido": 1, "evento": 1, "sem_prazo": 2, "manual": 3, "entregue": 4,
@@ -43,7 +45,7 @@ def speech_line(item, now):
     r, tier = item["row"], item["tier"]
     dl, f = deadline(r), deadline_field(r)
     verb = {"due": "entrega", "close": "fecha", "expected": "conclusão esperada"}.get(f, "prazo")
-    c, n = course(r), r["name"]
+    c, n = spoken_course(r), r["name"]
     if tier == "entregue":
         return f"{c}: {n} — o Moodle confirmou a entrega."
     if dl is None:
@@ -51,7 +53,7 @@ def speech_line(item, now):
     if tier == "prazo_alterado":
         return f"Prazo novo em {c}: {n} — agora {verb} {when(dl, now)}."
     if tier in ("24h", "dia", "2h") and dl > now:
-        return f"Criatura, tem atividade de {c} vencendo {when(dl, now)}. Olha isso aqui!"
+        return f"Criatura, tem atividade de {c} vencendo {when(dl, now)}: {n}."
     if tier == "atrasada":
         late = f" Ainda aceita até {when(r['cutoff'], now)}." if r["cutoff"] and r["cutoff"] > now else ""
         return f"{c}: {n} venceu {when(dl, now)} e o Moodle não confirmou a entrega.{late}"
@@ -106,37 +108,91 @@ def freshness(store, now):
     return txt, warn
 
 
-def summary_html(store, now):
+def name(r, size=70):
+    n = r["name"]
+    return n if len(n) <= size else n[:size - 1].rstrip() + "…"
+
+
+def spoken_course(r):
+    """Disciplina como se fala: "34 - Teoria da Computação - COMP6_MUZ" → "Teoria da Computação"."""
+    c = re.sub(r"^\d+\s*-\s*", "", r.get("course_name") or r.get("course_short") or "Sala Virtual")
+    return re.sub(r"\s*-\s*[A-Z0-9_]+$", "", c) or course(r)
+
+
+def line(r, now):
+    """Uma atividade numa fala: nome, disciplina e prazo."""
+    dl, c = deadline(r), spoken_course(r)
+    if dl is None:
+        return f"{name(r)} ({c}), sem prazo definido."
+    if dl < now:
+        return f"{name(r)} ({c}) venceu {when(dl, now)}."
+    return f"{name(r)} ({c}): {when(dl, now)}, {left(dl, now)}."
+
+
+def _groups(store, now):
     rows = [dict(r) for r in store.rows()]
-    by_key = {r["key"]: r for r in rows}
     st = {r["key"]: status(r, now) for r in rows}
+    up = sorted((r for r in rows if st[r["key"]] in ("pendente", "desconhecido") and deadline(r)), key=deadline)
+    late = sorted((r for r in rows if st[r["key"]] == "atrasada"), key=deadline, reverse=True)
+    return rows, up, late
+
+
+def answer(store, what, now, limit=5):
+    """O que a Ceci fala quando você pergunta (menu ou caixinha). Só com os dados da última consulta."""
+    if not store.last_sync():
+        return ["Ainda não conferi a Sala Virtual. Me conecta nas Configurações ou digita \"conferir\"."]
+    rows, up, late = _groups(store, now)
     start = local(now).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
-    todo = [r for r in rows if st[r["key"]] in ("pendente", "desconhecido", "evento") and deadline(r)]
-    today = sorted([r for r in todo if start <= deadline(r) < start + 86400], key=deadline)
-    week = sorted([r for r in todo if start + 86400 <= deadline(r) < start + 8 * 86400], key=deadline)
-    late = sorted([r for r in rows if st[r["key"]] == "atrasada"], key=deadline, reverse=True)
-    ok = store.last_success()
-    new = [by_key[c["key"]] for c in (store.changes(sync_id=ok["id"], kinds=["nova"]) if ok else []) if c["key"] in by_key]
-    moved = [(c, by_key[c["key"]]) for c in store.changes(since=now - 7 * 86400, kinds=["prazo"]) if c["key"] in by_key]
-
-    def item(r, extra=""):
-        url = html.escape(r["url"] or "", quote=True)
-        name = html.escape(r["name"])
-        link = f'<a href="{url}">{name}</a>' if url else name
-        return (f"<li>{link}<br><span class='m'>{html.escape(course(r))} · {html.escape(deadline_text(r, now))}"
-                f" · {STATUS_LABEL[st[r['key']]]}{extra}</span></li>")
-
-    def section(title, items, empty):
-        body = "".join(items) if items else f"<li class='m'>{empty}</li>"
-        return f"<h3>{title}</h3><ul>{body}</ul>"
-
+    say = []
+    if what == "atividades":
+        if not up and not late:
+            say.append("Nada pendente na Sala Virtual. Milagre!")
+        else:
+            say.append(f"Tem {len(up)} pra fazer" + (f" e {len(late)} atrasada(s)." if late else "."))
+            say += [line(r, now) for r in up[:limit]]
+            say += ["Atrasadas: " + line(r, now) if i == 0 else line(r, now) for i, r in enumerate(late[:3])]
+            rest = max(0, len(up) - limit) + max(0, len(late) - 3)
+            if rest:
+                say.append(f"E mais {rest}.")
+    elif what == "prazo":
+        nxt = [r for r in up if deadline(r) >= now]
+        say.append("A próxima é " + line(nxt[0], now) if nxt else "Nenhum prazo pela frente.")
+    elif what in ("hoje", "amanha", "semana"):
+        a, b, label = {"hoje": (now, start + 86400, "hoje"), "amanha": (start + 86400, start + 2 * 86400, "amanhã"),
+                       "semana": (now, start + 8 * 86400, "nos próximos 7 dias")}[what]
+        got = [r for r in up if a <= deadline(r) < b]
+        say.append(f"{len(got)} vencendo {label}." if got else f"Nada vencendo {label}.")
+        say += [line(r, now) for r in got[:limit]]
+        if len(got) > limit:
+            say.append(f"E mais {len(got) - limit}.")
+    elif what == "atrasadas":
+        say.append(f"{len(late)} atrasada(s)." if late else "Nenhuma atividade atrasada.")
+        say += [line(r, now) for r in late[:limit]]
+        if len(late) > limit:
+            say.append(f"E mais {len(late) - limit}.")
+    elif what == "resumo":
+        today = [r for r in up if now <= deadline(r) < start + 86400]
+        week = [r for r in up if now <= deadline(r) < start + 8 * 86400]
+        ok = store.last_success()
+        new = store.changes(sync_id=ok["id"], kinds=["nova"]) if ok else []
+        say.append(f"Hoje vence {len(today)}, na semana {len(week)}, atrasadas {len(late)}"
+                   + (f" e {len(new)} nova(s) na última consulta." if new else "."))
+        if week:
+            say.append("A próxima é " + line(week[0], now))
     fresh, warn = freshness(store, now)
-    out = [f"<p class='{'w' if warn else 'm'}'>{html.escape(fresh)}</p>",
-           section("Hoje", [item(r) for r in today], "Nada vence hoje."),
-           section("Esta semana", [item(r) for r in week], "Nada para os próximos 7 dias."),
-           section("Atrasadas", [item(r) for r in late], "Nenhuma atividade atrasada."),
-           section("Novidades da última sincronização", [item(r) for r in new], "Nenhuma atividade nova."),
-           section("Alterações de prazo (últimos 7 dias)",
-                   [item(r, f" · antes: {when(float(c['before']), now) if c['before'] not in (None, 'None') else 'sem prazo'}")
-                    for c, r in moved], "Nenhum prazo mudou.")]
-    return "".join(out)
+    if warn:
+        say.append(fresh)
+    return say
+
+
+def norm(text):
+    """Minúsculas, sem acento e sem espaço repetido (o que você digita x o nome no Moodle)."""
+    t = unicodedata.normalize("NFD", text.casefold())
+    return " ".join("".join(c for c in t if not unicodedata.combining(c)).split())
+
+
+def find(store, text, now, done=False):
+    """Atividades a fazer (done=True: as marcadas por você) cujo nome tem o texto digitado."""
+    t = norm(text)
+    want = ("manual",) if done else ("pendente", "desconhecido", "atrasada")
+    return [dict(r) for r in store.rows() if t and t in norm(r["name"]) and status(r, now) in want]

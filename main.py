@@ -9,10 +9,11 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QSystemTrayIcon
 
 from ceci.behavior import Behavior
+from ceci.command import HELP, CommandBox, parse
 from ceci.sala import texts
 from ceci.sala.service import SalaVirtual
 from ceci.sala.store import deadline, status
-from ceci.sala.ui import ActivitiesWindow, AlertCard, SalaDialog, SummaryDialog, open_url, screen_area
+from ceci.sala.ui import SalaDialog, open_url
 from ceci.settings import ROOT, Settings
 from ceci.speech import Speech
 from ceci.tray import Tray, build_menu
@@ -56,14 +57,15 @@ class App:
         self.beh = Behavior(self.win, self.s)
         self.speech = Speech(self.win, self.s)
         self.win.context_menu.connect(self._menu)
+        self.win.double_clicked.connect(self.ask)
         self.sala = SalaVirtual(is_fullscreen=fullscreen_app_active)
         self.sala.progress.connect(self._sala_progress)
         self.sala.finished.connect(self._sala_finished)
         self.sala.alerts.connect(self._sala_alerts)
         self.tray = Tray(self, ICON)
         self.tray.messageClicked.connect(self._toast_clicked)
-        self.toast_url, self.toast_action = None, self.open_activities
-        self.panel = self.dlg = self.acts = self.summary = self.sala_dlg = self.card = None
+        self.toast_url, self.toast_action = None, self.tell_activities
+        self.panel = self.dlg = self.sala_dlg = self.box = None
         self.fs_paused = False
         self.fs_timer = QTimer(timeout=self._check_fullscreen)
         self._update_fs_timer()
@@ -127,11 +129,81 @@ class App:
     def open_sala(self):
         self._open("sala_dlg", lambda: SalaDialog(self.sala))
 
-    def open_activities(self):
-        self._open("acts", lambda: ActivitiesWindow(self.sala, self.open_summary))
+    def tell(self, what, aid="tarefa"):
+        """Ela responde falando (sem janela), com os dados da última consulta."""
+        self._say(aid, texts.answer(self.sala.store, what, self.sala.now()))
 
-    def open_summary(self):
-        self._open("summary", lambda: SummaryDialog(self.sala))
+    def tell_activities(self):
+        self.tell("atividades")
+
+    def tell_summary(self):
+        self.tell("resumo", "resumo")
+
+    def _say(self, aid, lines):
+        w = self.win
+        if not w.isVisible() or w.player.paused or w.exiting:
+            return
+        self.beh.user_activity()
+        if aid and not w.dragging:
+            w.stop_walk()
+            self.speech.muted = aid  # a fala é a resposta, não a automática da animação
+            w.play(aid, force=True)
+        self.speech.say_many(lines)
+
+    # --- caixinha do clique duplo ---
+    def ask(self):
+        if self.box:
+            self.box.close()
+        box = self.box = CommandBox()
+        box.submitted.connect(self.command)
+        box.destroyed.connect(lambda *_: self.box is box and setattr(self, "box", None))
+        box.show_beside(self.win.foot, self.win.sprites.scale, self.win.area())
+
+    def command(self, text):
+        action, rest = parse(text)
+        now = self.sala.now()
+        if action in ("atividades", "prazo", "hoje", "amanha", "semana", "atrasadas"):
+            self.tell(action, "prazo" if action == "atrasadas" else "tarefa")
+        elif action == "resumo":
+            self.tell_summary()
+        elif action in ("fiz", "desfazer"):
+            self._mark(rest, action == "fiz", now)
+        elif action == "conferir":
+            self.check_sala()
+        elif action == "conectar":
+            self.open_sala()
+        elif action == "passear":
+            self.stroll()
+        elif action == "falar":
+            self.chat()
+        elif action == "oi":
+            self.interact()
+        elif action == "esconder":
+            self.hide_ceci()
+        elif action == "configuracoes":
+            self.open_settings()
+        elif action == "ajuda":
+            self._say(None, HELP)
+        else:
+            self._say("confusa", [f"Não entendi \"{rest[:40]}\". Não tenho IA, só umas palavras. Digita \"ajuda\"."])
+
+    def _mark(self, rest, on, now):
+        if not rest:
+            return self._say(None, ["Fiz qual? Digita \"fiz\" e um pedaço do nome da atividade."])
+        found = texts.find(self.sala.store, rest, now, done=not on)
+        if len(found) == 1:
+            r = found[0]
+            self.sala.store.set_manual(r["key"], on, now)
+            self.sala.reschedule()
+            msg = (f"Marquei \"{texts.name(r, 50)}\" como feita por você. Não é entrega confirmada no Moodle, viu?"
+                   if on else f"Desmarquei \"{texts.name(r, 50)}\". Volto a cobrar.")
+            self._say("feliz" if on else None, [msg])
+        elif not found:
+            self._say("confusa", [f"Não achei nenhuma atividade {'a fazer' if on else 'marcada por você'} com "
+                                  f"\"{rest[:40]}\" no nome."])
+        else:
+            self._say(None, [f"Achei {len(found)}: " + "; ".join(texts.name(r, 40) for r in found[:4])
+                             + ". Digita um pedaço maior do nome."])
 
     def check_sala(self):
         if not self.sala.connected():
@@ -179,46 +251,41 @@ class App:
             self._react("erro", "sv_falha")
         if r != "ok" and (out["trigger"] == "auto" or not self._can_react()) and self.sala.store.prefs()["toast"]:
             self.toast_url = None
-            self.toast_action = self.open_sala if k == "sessao" else self.open_activities
+            self.toast_action = self.open_sala if k == "sessao" else self.tell_activities
             self.tray.showMessage("Sala Virtual · consulta " + ("parcial" if r == "parcial" else "falhou"),
                                   out["message"] + ("\nClique para entrar de novo." if k == "sessao" else ""),
                                   QSystemTrayIcon.Warning, 15000)
 
     def _sala_alerts(self, a):
+        """Ela fala os avisos, um atrás do outro. Notificação do Windows só quando ela não pode falar."""
         items, now, prefs = a["items"], a["now"], self.sala.store.prefs()
-        title = "Sala Virtual"
+        can = not a["fullscreen"] and self._can_react()
         if a["first"]:  # primeira sincronização: um resumo em vez de uma enxurrada de avisos
             rows = [dict(r) for r in self.sala.store.rows()]
-            soon = sorted((r for r in rows if status(r, now) in ("pendente", "desconhecido", "atrasada", "evento")
-                           and (deadline(r) or 9e12) < now + 7 * 86400), key=lambda r: deadline(r) or 0)
-            line = (f"Encontrei {len(rows)} atividades em {len({r['course'] for r in rows})} disciplinas; "
-                    f"{len(soon)} pedem atenção nos próximos 7 dias.")
-            self._react("resumo", text=line)
+            soon = sorted((r for r in rows if status(r, now) in ("pendente", "desconhecido", "evento")
+                           and now <= (deadline(r) or 0) < now + 7 * 86400), key=deadline)
+            lines = [f"Encontrei {len(rows)} atividades em {len({r['course'] for r in rows})} disciplinas; "
+                     f"{len(soon)} vencem nos próximos 7 dias."] + [texts.line(r, now) for r in soon[:5]]
+            if can:
+                return self._say("resumo", lines + ([f"E mais {len(soon) - 5}."] if len(soon) > 5 else []))
             items = items or [{"row": r, "tier": "3d"} for r in soon]
-            title = "Primeira sincronização"
         if not items:
             return
-        if prefs["toast"]:
-            t, body = texts.toast(items, now)
-            self.toast_url = items[0]["row"]["url"] if len(items) == 1 else None
-            self.toast_action = self.open_activities
-            self.tray.showMessage(t, body, QSystemTrayIcon.Information, 15000)
-        if a["fullscreen"] or not self._can_react():
-            return  # tela cheia ou pausada: só a notificação do Windows (a lista guarda tudo)
-        if not a["first"]:
-            if len(items) == 1:
-                i = items[0]
-                aid = {"nova": "tarefa", "prazo_alterado": "tarefa", "entregue": "feliz", "7d": "lembrete",
-                       "3d": "lembrete"}.get(i["tier"], "prazo")
-                self._react(aid, texts.speech_category(i, now), texts.speech_line(i, now))
-            else:
-                self._react("resumo", text=f"Tenho {len(items)} avisos da faculdade pra você. Olha aqui!")
-        if self.card:
-            self.card.close()
-        card = self.card = AlertCard(items, now, title, self.open_activities)
-        # só esquece o cartão se for este mesmo (o antigo, ao fechar, não pode apagar a referência do novo)
-        card.destroyed.connect(lambda *_: self.card is card and setattr(self, "card", None))
-        card.show_near(self.win.foot, screen_area(self.win))
+        if not can:
+            if prefs["toast"]:  # pausada, oculta ou tela cheia: não perde o aviso
+                t, body = texts.toast(items, now)
+                self.toast_url = items[0]["row"]["url"] if len(items) == 1 else None
+                self.toast_action = self.tell_activities
+                self.tray.showMessage(t, body, QSystemTrayIcon.Information, 15000)
+            return
+        if len(items) == 1:
+            i = items[0]
+            aid = {"nova": "tarefa", "prazo_alterado": "tarefa", "entregue": "feliz", "7d": "lembrete",
+                   "3d": "lembrete"}.get(i["tier"], "prazo")
+            self._react(aid, texts.speech_category(i, now), texts.speech_line(i, now))
+        else:
+            lines = [f"Tenho {len(items)} avisos da faculdade:"] + [texts.speech_line(i, now) for i in items[:6]]
+            self._say("resumo", lines + ([f"E mais {len(items) - 6}."] if len(items) > 6 else []))
 
     def _toast_clicked(self):
         if self.toast_url:

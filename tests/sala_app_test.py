@@ -71,8 +71,8 @@ check_now()
 check("início da consulta = Conferindo Sala Virtual; depois Atualizando dados; fim = Sucesso",
       played[:3] == ["sala_virtual", "atualizando", "sucesso"])
 check("fala de consulta concluída (só quando deu certo)", ("sv_ok", None) in said)
-check("primeira sincronização: Resumo do dia + cartão com o que vence na semana",
-      "resumo" in played and app.card is not None)
+check("primeira sincronização: Resumo do dia + ela fala o que vence na semana (sem janela)",
+      "resumo" in played and any(t and "faltam" in t for _, t in said + [(c, t) for c, _, t in app.speech.queue]))
 check("resumo diz quantas atividades achou", any(t and t.startswith("Encontrei ") for _, t in said))
 
 played.clear()
@@ -99,11 +99,23 @@ check("pausada: consulta acontece, mas a Ceci não anima nem fala", not played a
       and "cm:521" in {r["key"] for r in app.sala.store.rows()})
 app.set_paused(False)
 
-app.open_activities()
-app.open_summary()
+app.speech.bubble.stop()
+app.speech.queue = []
+said.clear()
+app.command("o que vence essa semana?")
+check("caixinha: pergunta da semana = ela fala as atividades", any(t and "vencendo" in t for _, t in said))
+app.speech.bubble.stop()
+app.speech.queue = []
+said.clear()
+app.command("qual a capital da frança")
+check("caixinha: o que ela não entende, ela diz (não inventa)", any(t and t.startswith("Não entendi") for _, t in said))
+app.ask()
+QCoreApplication.processEvents()
+check("clique duplo abre a caixinha", app.box is not None and app.box.isVisible())
+app.box.close()
 app.open_sala()
 QCoreApplication.processEvents()
-check("janelas abrem pelo menu", app.acts.isVisible() and app.summary.isVisible() and app.sala_dlg.isVisible())
+check("Configurações da Sala Virtual abre", app.sala_dlg.isVisible())
 
 srv.shutdown()
 print(f"\n{len(fails)} falha(s)" if fails else "\ntudo ok")

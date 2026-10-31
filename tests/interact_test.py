@@ -41,10 +41,17 @@ head = w.anchor + QPointF(0, -290 * s)
 body = w.anchor + QPointF(0, -110 * s)
 
 
+def fire_click():  # o clique simples espera o intervalo do clique duplo; o teste não precisa esperar
+    if w.click_timer.isActive():
+        w.click_timer.stop()
+        w._click()
+
+
 def click(pos):
     sp.hide()
     w.play("idle", force=True, cut=True)
     QTest.mouseClick(w, Qt.LeftButton, Qt.NoModifier, pos.toPoint())
+    fire_click()
 
 
 def step1():
@@ -55,6 +62,13 @@ def step1():
     click(head)
     check("clique na cabeça também = Interagir (não é carinho)", w.player.aid in INTERACT
           and w.player.aid != "carinho")
+    sp.hide()
+    w.play("idle", force=True, cut=True)
+    dbl = []
+    w.double_clicked.connect(lambda: dbl.append(1))
+    QTest.mouseDClick(w, Qt.LeftButton, Qt.NoModifier, body.toPoint())
+    check("clique duplo = caixinha, sem Interagir", dbl == [1] and not w.click_timer.isActive()
+          and w.player.aid not in INTERACT)
     QTimer.singleShot(200, step2)
 
 
@@ -118,6 +132,7 @@ def step_hold():
     mev(QEvent.MouseMove, body + QPointF(9, 5), Qt.LeftButton)
     check("clique tremido não levanta a Ceci", not w.dragging)
     mev(QEvent.MouseButtonRelease, body + QPointF(9, 5), Qt.NoButton)
+    fire_click()
     check("clique tremido = Interagir", w.player.aid in INTERACT)
     w.play("idle", force=True, cut=True)
     mev(QEvent.MouseButtonPress, body, Qt.LeftButton)

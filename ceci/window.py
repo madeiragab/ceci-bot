@@ -27,6 +27,7 @@ class CeciWindow(QWidget):
     became_idle = Signal()
     moved = Signal()
     interaction = Signal(str)  # clique, carinho, arrastada, girando, solta, tonta, acordando, olhando (falas)
+    double_clicked = Signal()  # clique duplo nela: caixinha para digitar
 
     def __init__(self, settings):
         super().__init__(None)
@@ -65,6 +66,9 @@ class CeciWindow(QWidget):
         self._reset_rub()
         self.last_pet = 0.0
         self.pet_timer = QTimer(self, singleShot=True, timeout=self.pet)
+        # clique simples espera o tempo do clique duplo do Windows: o duplo abre a caixinha sem fazer ela interagir
+        self.click_timer = QTimer(self, singleShot=True, timeout=self._click,
+                                  interval=QGuiApplication.styleHints().mouseDoubleClickInterval())
         self.eyes_on = False
         self.eyes_idx = None
         self.eyes_last_near = 0.0
@@ -510,8 +514,19 @@ class CeciWindow(QWidget):
         if self.player.aid in ("cochilo", "dormindo"):
             self.wake()
         elif where:  # clicar nela (cabeça ou corpo) = Interagir; carinho é passando o mouse na cabeça
+            self.click_timer.start()
+
+    def _click(self):
+        if not self.exiting and not self.dragging:
             self.interaction.emit("clique")
             self.interact()
+
+    def mouseDoubleClickEvent(self, e):
+        if e.button() != Qt.LeftButton or self.exiting or not self._hit(e.position()):
+            return
+        self.click_timer.stop()
+        self.press = None  # o soltar do segundo clique não conta como clique
+        self.double_clicked.emit()
 
     def interact(self, talk=False):
         self.stop_walk()

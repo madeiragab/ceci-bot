@@ -181,6 +181,18 @@
   entregues. O Moodle de teste agora imita esse HTML. Seis questionários fechados não mostram tentativa nem botão:
   ficam como "desconhecido".
 
+### Ela fala, sem janela (31/10, pedido do usuário)
+- Avisos: falados no balão, um atrás do outro (`Speech.say_many`, sem o limite de 3 da fila das interações).
+  Sem cartão. Notificação do Windows só quando ela não pode falar (pausada, oculta, tela cheia).
+- Removidos: janelas Minhas atividades e Resumo da faculdade e o cartão de aviso. O menu agora faz ela falar.
+- Clique duplo: caixinha (`ceci/command.py`) com palavras-chave fixas (atividades, prazo, hoje, amanhã, semana,
+  atrasadas, resumo, conferir, fiz/não fiz + nome, ajuda...). O que não entende, diz que não entendeu. O clique
+  simples espera o intervalo do clique duplo do Windows antes de Interagir, para o duplo não fazer as duas coisas.
+- Falas românticas tiradas: a categoria `apaixonada` inteira (beijinho/coração/fofa ficam sem fala, só a animação),
+  "Beijinho!", "❤️", "Sentiu saudade?", "Tá carente hoje?", "Awnnn... seu idiota.". Agora 274 frases em 41 categorias.
+- Testado: sala_test 53, sala_app_test 12 (caixinha responde e diz quando não entende), interact_test 16 (clique
+  duplo não faz Interagir), speech_test 24. A caixinha não foi testada na tela de verdade, só no modo sem tela.
+
 ### Não verificado ainda (Fase 2)
 - Clique na notificação do Windows; consulta automática das 08:00 com a sessão já expirada (fallback pelo calendário).
 

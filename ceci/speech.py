@@ -29,8 +29,6 @@ REACT = {
     "curiosa": ("curiosa", 0.5, 0), "observando": ("curiosa", 0.5, 0),
     "idle_fofo": ("idle", 0.3, 0), "borda": ("idle", 0.5, "core"),
     "ajeitando": ("esperando", 0.4, 0),
-    "fofa": ("apaixonada", 0.5, 0), "apaixonada": ("apaixonada", 0.7, 0),
-    "beijinho": ("apaixonada", 0.7, 0), "coracao": ("apaixonada", 0.7, 0),
     "lendo": ("lendo", 0.7, "core"), "lendo_chao": ("lendo", 0.7, "core"),
     "cafe": ("cafe", 0.7, "core"), "caneca": ("cafe", 0.7, "core"),
     "sonolenta": ("sonolenta", 0.8, "core"),
@@ -332,6 +330,16 @@ class Speech(QObject):
         if not force:
             self.last_auto = time.monotonic()
         self._show(cat, prio, text)
+        return True
+
+    def say_many(self, lines, cat="sv_info"):
+        """Várias frases prontas em sequência (a lista de atividades), sem o limite da fila das interações."""
+        lines = [t for t in lines if t]
+        if not lines or not self.say(cat, 3, force=True, text=lines[0]):
+            return False
+        self.queue += [(cat, 3, t) for t in lines[1:] if t not in [q[2] for q in self.queue]]
+        if len(lines) > 1:
+            self.bubble.hurry()
         return True
 
     def _show(self, cat, prio, text):

@@ -21,8 +21,8 @@ def build_menu(app, tray=False):
             size.addAction(t, lambda v=v: app.set_size(v))
     if getattr(app, "sala", None):
         m.addSeparator()
-        m.addAction("Minhas atividades", app.open_activities)
-        m.addAction("Resumo da faculdade", app.open_summary)
+        m.addAction("Minhas atividades", app.tell_activities)
+        m.addAction("Resumo da faculdade", app.tell_summary)
         m.addAction("Conferir Sala Virtual agora", app.check_sala)
         m.addSeparator()
     pause = QAction("Pausar animações", m, checkable=True, checked=app.win.player.paused)

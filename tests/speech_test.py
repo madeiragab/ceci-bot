@@ -86,6 +86,8 @@ def t_typing():
     text = b.text
     hit = w.anchor + QPointF(0, -110 * s)
     QTest.mouseClick(w, Qt.LeftButton, Qt.NoModifier, hit.toPoint())
+    w.click_timer.stop()  # o clique simples espera o intervalo do clique duplo; o teste não precisa esperar
+    w._click()
     check("clique no meio da frase não corta: entra na fila", b.cat == "inicio" and b.text == text
           and [q[0] for q in sp.queue] == ["clique"])
     w._start_drag()

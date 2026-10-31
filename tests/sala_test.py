@@ -313,17 +313,23 @@ check("... desconectar apaga", protect.load() is None and not os.path.exists(pro
 log = open(LOG, encoding="utf8").read() if os.path.exists(LOG) else ""
 check("log sem sesskey, cookie nem token", log and not any(s in log for s in (SESSKEY, SESSION, TOKEN, PASSWORD)))
 
-# janelas abrem com os dados salvos
-from ceci.sala.texts import summary_html  # noqa: E402
-from ceci.sala.ui import ActivitiesWindow, SalaDialog, SummaryDialog  # noqa: E402
-html = summary_html(store, T0)
-check("Resumo da faculdade monta as seções", all(t in html for t in ("Hoje", "Esta semana", "Atrasadas",
-                                                                      "Novidades", "Alterações de prazo")))
-aw = ActivitiesWindow(sala, lambda: None)
-aw.show()
-QCoreApplication.processEvents()
-check("Minhas atividades lista as pendentes", aw.list.count() >= 3)
-SummaryDialog(sala).show()
+# o que ela fala quando você pergunta (menu ou caixinha), com os dados salvos
+from ceci.command import parse  # noqa: E402
+from ceci.sala import texts  # noqa: E402
+from ceci.sala.ui import SalaDialog  # noqa: E402
+said = texts.answer(store, "atividades", T0)
+todo = [r for r in store.rows() if status(r, T0) == "pendente" and r["due"]]
+check("\"atividades\" diz quantas e fala nome, disciplina e prazo de cada uma", said[0].startswith("Tem ") and todo
+      and any(todo[0]["name"] in t and "faltam" in t for t in said))
+check("\"resumo\" fala hoje, semana e atrasadas", said and texts.answer(store, "resumo", T0)[0].startswith("Hoje vence"))
+check("sem nenhuma consulta ela diz que ainda não conferiu",
+      texts.answer(Store(os.path.join(tempfile.mkdtemp(), "v.db")), "atividades", T0)[0].startswith("Ainda não conferi"))
+check("caixinha entende as palavras (sem IA)",
+      [parse(t)[0] for t in ("atividades", "o que vence hoje?", "atividades atrasadas", "próxima entrega", "resumo",
+                             "conferir", "fiz lista 3", "não fiz lista 3", "qual a capital da frança")]
+      == ["atividades", "hoje", "atrasadas", "prazo", "resumo", "conferir", "fiz", "desfazer", "?"])
+check("\"fiz\" acha a atividade pelo pedaço do nome, sem acento",
+      [r["key"] for r in texts.find(store, texts.norm(todo[0]["name"]).upper(), T0)] == [todo[0]["key"]])
 SalaDialog(sala).show()
 QCoreApplication.processEvents()
 

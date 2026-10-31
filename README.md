@@ -25,7 +25,7 @@
 ## ✨ O que ela faz
 
 - **Vive na tela**: janela transparente e sem borda. Os cliques passam pelas áreas vazias, e ela fica sempre por cima das outras janelas (opcional).
-- **Fala com você**: um balão em cima da cabeça escreve letra a letra, como nos RPGs antigos. São 262 frases fixas em 31 situações: cliques, carinho, arraste, girar ela no ar, café, leitura, sono, o gato e outras. As falas saem em sequência, nunca uma cortando a outra. Não usa IA.
+- **Fala com você**: um balão em cima da cabeça escreve letra a letra, como nos RPGs antigos. São 274 frases fixas em 41 situações: cliques, carinho, arraste, girar ela no ar, café, leitura, sono, o gato e outras. As falas saem em sequência, nunca uma cortando a outra. Não usa IA.
 - **Tem rotina própria**: respira, pisca, ajeita os óculos, lê, toma café, brinca com o gato, cochila e passeia pela tela. Tudo isso por timers e sorteio, sem IA.
 - **Reage a você**:
   - **Mouse**: os olhos seguem o cursor quando você mexe rápido.
@@ -49,7 +49,7 @@ A Ceci cuida dos prazos da [Sala Virtual do IFSULDEMINAS — Muzambinho](https:/
 
 **Lembretes** (calculados com os dados salvos, sem consultar o Moodle de novo): 7 dias, 3 dias, 24 h e 2 h antes, no dia e quando atrasa. Cada aviso sai uma vez só por atividade e prazo. Prazo mudou? Os lembretes são refeitos. O Moodle confirmou a entrega? Os lembretes param. Há horário silencioso e respeito à tela cheia, com opção para os alertas importantes.
 
-**Como ela avisa**: notificação do Windows (clicar abre a atividade), cartão ao lado dela com **Abrir no Moodle**, animação e fala:
+**Como ela avisa**: falando. Sem janela e sem cartão: cada aviso sai no balão, um atrás do outro, com a disciplina, o nome da atividade e o prazo. A notificação do Windows só aparece quando ela não pode falar (pausada, oculta ou com tela cheia), para o aviso não se perder.
 
 | Evento | Animação | Fala |
 |---|---|---|
@@ -58,15 +58,28 @@ A Ceci cuida dos prazos da [Sala Virtual do IFSULDEMINAS — Muzambinho](https:/
 | Atividade nova | Mostrando tarefa | "Opa! Temos atividade nova!" + nome e prazo |
 | Prazo chegando (7 e 3 dias) | Mostrando lembrete | "Pssiu! Olha a data dessa entrega!" |
 | Prazo urgente (24 h, no dia, 2 h, atraso) | Prazo urgente | "CARALHO, ISSO VENCE HOJE!" (só quando vence hoje mesmo) |
-| Vários avisos juntos | Resumo do dia | um resumo, em vez de vários balões |
+| Vários avisos juntos | Resumo do dia | "Tenho N avisos da faculdade" e fala um por um |
 | Consulta concluída | Sucesso | "Prontinho! Sua lista tá atualizada." |
 | Falha (sessão, internet, consulta) | Erro / Confusa | a frase do que aconteceu de verdade |
 
 As animações "Sincronização falhou" e "Sem internet" não existem nas spritesheets, então a falha usa **Erro** e a falta de internet usa **Confusa**. Nenhum quadro foi inventado.
 
-**Menu**: **Minhas atividades** (pendentes, atrasadas, próxima entrega, filtros por disciplina e status, botão para abrir cada atividade), **Resumo da faculdade** (hoje, esta semana, atrasadas, novidades e mudanças de prazo) e **Conferir Sala Virtual agora**. Tudo funciona offline com os dados da última consulta e sempre mostra quando ela foi feita.
+**Perguntar para ela**: **clique duplo** nela abre uma caixinha para digitar. Ela não tem IA, então entende palavras fixas e responde falando:
 
-**Status de cada atividade**: pendente, entrega confirmada pelo Moodle, concluída (critério do Moodle), atrasada, sem prazo definido, status desconhecido ou marcada por você. "Já fiz" é só uma marca sua: não conta como entrega confirmada. Rascunho salvo também não conta.
+| Você digita | Ela fala |
+|---|---|
+| atividades, tarefas, pendentes | quantas tem, as próximas (nome, disciplina, prazo) e as atrasadas |
+| prazo, próxima | a próxima entrega |
+| hoje, amanhã, semana | o que vence nesse período |
+| atrasadas | as que passaram do prazo sem entrega confirmada |
+| resumo | hoje, semana, atrasadas e novidades da última consulta |
+| conferir | consulta a Sala Virtual agora |
+| fiz + pedaço do nome | marca a atividade como feita por você ("não fiz" desmarca) |
+| ajuda | a lista do que ela entende |
+
+O que ela não entende, ela diz que não entendeu. No menu, **Minhas atividades** e **Resumo da faculdade** fazem ela falar o mesmo, e **Conferir Sala Virtual agora** consulta na hora. Tudo funciona offline com os dados da última consulta; se eles estiverem velhos ou a última consulta falhou, ela avisa.
+
+**Status de cada atividade**: pendente, entrega confirmada pelo Moodle, concluída (critério do Moodle), atrasada, sem prazo definido, status desconhecido ou marcada por você. "fiz" é só uma marca sua: não conta como entrega confirmada. Rascunho salvo também não conta.
 
 **Limites honestos**:
 - A Sala Virtual está com os web services do Moodle desligados, então não existe API para aluno. A Ceci lê pelas mesmas chamadas que o Painel do Moodle usa, com a sua sessão.
@@ -116,6 +129,7 @@ O script gera `%LOCALAPPDATA%\Programs\Ceci Bot\Ceci Bot.exe` com PyInstaller e 
 |---|---|
 | Mexer o mouse rápido perto dela | Ela acompanha o cursor com o olhar. Cada direção dura no mínimo 1,5 s, e depois ela espera 10 s para voltar a seguir. |
 | Clicar nela (cabeça ou corpo) | Interagir: acena, fica feliz, manda beijinho ou coração, e fala uma frase de clique |
+| Clique duplo nela | Caixinha para digitar uma pergunta (atividades, prazo, hoje, resumo...) |
 | Passar o mouse várias vezes pela cabeça (vai e volta) | Carinho |
 | Clicar e arrastar | Fica pendurada. Ao soltar, cai e pousa. |
 | Girar ou sacudir enquanto arrasta | Reclama ("VOU VOMITAR!") e pousa tonta |
@@ -216,7 +230,8 @@ Quando a Ceci é ocultada, os timers param. O modo econômico desliga a respira�
 ```
 main.py              # app: início, menu, bandeja, tela cheia, fechar animado
 ceci/                # engine, janela, rotina, sprites, configurações, UI
-ceci/sala/           # Sala Virtual: login, leitura do Moodle, SQLite, lembretes, janelas
+ceci/sala/           # Sala Virtual: login, leitura do Moodle, SQLite, lembretes, falas
+ceci/command.py      # caixinha do clique duplo (palavras-chave, sem IA)
 assets/              # sprites recortados, frames.json, animations.json, falas.json, ícone
 assetsoriginal/      # spritesheets originais (fundo magenta)
 tools/               # pipeline de sprites, manifesto e build do .exe

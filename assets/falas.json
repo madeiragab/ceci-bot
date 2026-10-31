@@ -1,7 +1,6 @@
 {
  "_sobre": "Ceci Bot — banco de falas v1.0. Cada categoria é sorteada sem repetir até esgotar. Só reações visuais e brincadeiras: nada aqui afirma que código, testes ou tarefas foram concluídos de verdade. As categorias 'girando' (girada/sacudida no ar) e 'tonta' (pouso depois do giro) foram escritas depois, fora do banco v1.0, e podem ser editadas à vontade. Fase 2 (Sala Virtual): as categorias 'sv_*' usam o texto do usuário sem alteração; as listas de prazo urgente e de falha foram separadas pelo que aconteceu de verdade (vence hoje, ainda dá tempo, atrasada; login, rede, consulta parcial, erro), para a fala sempre bater com o resultado real.",
  "inicio": [
-  "Oieeee! Cheguei! Sentiu saudade? KKKKK",
   "Licença, licença! Sua especialista favorita chegou.",
   "Puta merda, quase fiquei presa naquela porta!",
   "Bom, cheguei. O que vamos aprontar hoje?",
@@ -42,8 +41,7 @@
   "Pera, você tá me cutucando?",
   "Eu tô aqui, doido! KKKKK",
   "Atenção recebida com sucesso, senhor!",
-  "CARALHO! Avisaaa!",
-  "Tá carente hoje, é? Hihihi."
+  "CARALHO! Avisaaa!"
  ],
  "carinho": [
   "Hihihi... gostei.",
@@ -52,7 +50,6 @@
   "Hehehe... mais um pouquinho?",
   "Eu não sou um gato, sabia? ...Tá, continua.",
   "Assim eu fico mal-acostumada, porra.",
-  "Awnnn... seu idiota.",
   "Tô ficando mimada. A culpa é sua!",
   "Tá tentando comprar minha simpatia? Porque tá funcionando.",
   "Hmmm... carinho aprovado."
@@ -220,16 +217,6 @@
   "Puta merda... essa doeu.",
   "Hmmm... preciso de um abraço."
  ],
- "apaixonada": [
-  "Awnnn...",
-  "Você é um idiota... um idiota fofo.",
-  "Para de ser bonitinho, porra.",
-  "Hihihi... gostei.",
-  "Assim você me deixa sem graça!",
-  "Olha... não vou admitir que gostei. KKKKK",
-  "Tá, essa foi boa. Ganhou um coraçãozinho.",
-  "Você sabe que é difícil ficar brava com você, né?"
- ],
  "gato": [
   "OZZYYYY! VEM CÁ, SEU LINDO!",
   "Bowie! Larga isso, criatura!",
@@ -303,8 +290,6 @@
   "Eu só tava... verificando a segurança do ambiente."
  ],
  "saida": [
-  "Tô indo, tá? Beijinho!",
-  "Até depois, seu idiota! ❤️",
   "Vou nessa! Não faz besteira.",
   "Tchauzinhooo!",
   "Partiu cuidar da minha vida.",
