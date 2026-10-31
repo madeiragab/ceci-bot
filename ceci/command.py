@@ -48,17 +48,21 @@ def parse(text):
 
 
 class CommandBox(QLineEdit):
-    """Campo pequeno ao lado da Ceci. Enter manda; Esc ou clicar fora fecha."""
+    """Barrinha ao lado da Ceci. Enter manda; Esc ou clicar fora some."""
     submitted = Signal(str)
 
     def __init__(self):
-        super().__init__(None, Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        super().__init__()
+        # barrinha solta: sem moldura, sem X, sem botão na barra de tarefas, quase transparente
+        self.setWindowFlags(Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setAttribute(Qt.WA_QuitOnClose, False)  # fechar a caixinha nunca fecha o app
-        self.setPlaceholderText("Fala comigo: atividades, prazo, hoje, resumo… (Esc fecha)")
-        self.setFixedWidth(330)
-        self.setStyleSheet("QLineEdit { background: #141114; color: #f1eaea; border: 2px solid #b3141f;"
-                           " border-radius: 10px; padding: 6px 10px; font-family: 'Segoe UI'; font-size: 10pt; }")
+        self.setPlaceholderText("fala comigo…")
+        self.setFixedWidth(260)
+        self.setStyleSheet("QLineEdit { background: rgba(20, 17, 20, 70); color: #ffffff; border: 1px solid"
+                           " rgba(255, 255, 255, 60); border-radius: 9px; padding: 4px 10px;"
+                           " font-family: 'Segoe UI'; font-size: 10pt; selection-background-color: #b3141f; }")
         self.returnPressed.connect(self._send)
 
     def _send(self):
