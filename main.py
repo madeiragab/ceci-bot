@@ -76,6 +76,7 @@ class App:
         self.ai.failed.connect(lambda f: self._say(f["anim"], f["say"]))
         self.ai.speak.connect(self._say)
         self.ai.local.connect(self.run_local)
+        self._log_start()
         # cérebro: falas soltas e vontades vindas da IA (outra corrente, mesmas pausas de limite)
         mp = make_provider(self.s["ai_provider"], self.s["ai_chain"])
         if hasattr(mp, "paused") and hasattr(self.ai.provider, "paused"):
@@ -92,6 +93,17 @@ class App:
         self.fs_paused = False
         self.fs_timer = QTimer(timeout=self._check_fullscreen)
         self._update_fs_timer()
+
+    def _log_start(self):
+        """Diagnóstico ao abrir (sem nenhuma chave): pasta usada, serviços com chave, mensagens no histórico."""
+        from ceci.ia import keys
+        from ceci.settings import CONFIG_DIR
+        try:
+            with open(os.path.join(CONFIG_DIR, "ceci.log"), "a", encoding="utf8") as f:
+                f.write(f"{time.strftime('%d/%m %H:%M:%S')} abriu | pasta {CONFIG_DIR} | chaves {sorted(keys.load())} | "
+                        f"mensagens {len(self.ai.conv.messages)} | IA {self.ai.provider.is_available()}\n")
+        except OSError:
+            pass
 
     def start(self):
         self.win.set_start_pos()

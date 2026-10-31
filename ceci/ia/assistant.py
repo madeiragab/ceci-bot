@@ -8,7 +8,7 @@ import time
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from ..sala import texts
-from . import academic, live, prompts, router
+from . import academic, files, live, prompts, router
 from .context import Conversation
 from .personality import Personality
 from .provider import AIError
@@ -25,9 +25,6 @@ FAIL = {
     "cancelada": "Beleza, deixei essa pra lá.",
 }
 SLOW = 1200  # ms até "pensando" virar "processando"
-FILE_TYPES = (".txt", ".md", ".markdown")
-FILE_BYTES = 50_000_000
-FILE_CHARS = 100_000  # do arquivo vai pra IA até isso (~30 mil tokens: o Gemini aguenta; o Groq passa a vez)
 
 
 class Assistant(QObject):
@@ -49,6 +46,7 @@ class Assistant(QObject):
         self.job = 0                 # número do envio: resposta de envio cancelado/expirado é descartada
         self.retry_text = None       # última que falhou ("tenta de novo")
         self.consent_pending = None  # pergunta acadêmica esperando "sim" para mandar os dados
+        self.files = {}              # caminho → texto inteiro dos arquivos entregues (só na memória)
         self.watchdog = QTimer(self, singleShot=True, timeout=self._expired)
         self._done.connect(self._finish)
 
@@ -127,9 +125,12 @@ class Assistant(QObject):
         prompt.transcript = prompts.markdown(self.conv.recent(prompts.TRANSCRIPT, prompts.TRANSCRIPT_CHARS)[:-1])
         prompt.last_provider = self.conv.state["provider"]
         f = self.conv.state.get("file")
-        if f:  # arquivo que o usuário mandou: vai junto até a próxima "nova conversa" ou outro arquivo
-            cut = f"Ele tem {f['size']} caracteres; você recebeu só os primeiros {len(f['text'])}." if f["cut"] else ""
-            prompt.message = prompts.FILE.format(name=f["name"], text=f["text"], cut=cut) + "\n\n" + prompt.message
+        body = self._file_text(f) if f else None
+        if body:  # arquivo que o usuário mandou: vai junto até a próxima "nova conversa" ou outro arquivo
+            part, how = files.excerpt(body, text)
+            cut = (f"Ele tem {len(body)} caracteres; você recebeu {how} (marcados [trecho N de M]). Se a resposta "
+                   "não estiver nesses trechos, diga isso em vez de inventar.") if how else ""
+            prompt.message = prompts.FILE.format(name=f["name"], text=part, cut=cut) + "\n\n" + prompt.message
         self.busy, self.retry_text = text, None
         self.job += 1
         meta = {"job": self.job, "text": text, "route": r.kind, "keys": keys, "ctx": ctx, "pkey": pkey}
@@ -212,31 +213,33 @@ class Assistant(QObject):
     def attach(self, path, question=None):
         """Arquivo .txt/.md que o usuário entregou (arrastado nela ou "Anexar" no chat): lê e manda pra IA."""
         name = os.path.basename(path)
-        if os.path.splitext(name)[1].lower() not in FILE_TYPES:
-            return self._say("negando", [f"Só leio .txt e .md por enquanto. Esse \"{name}\" eu não abro."])
         try:
-            if os.path.getsize(path) > FILE_BYTES:
-                return self._say("negando", [f"Esse \"{name}\" é grande demais pra mim, porra. Até 50 MB."])
-            with open(path, "rb") as fh:
-                raw = fh.read()
+            text = files.read(path)
+        except ValueError as e:
+            if str(e) == "tipo":
+                return self._say("negando", [f"Só leio .txt e .md por enquanto. Esse \"{name}\" eu não abro."])
+            return self._say("negando", [f"Esse \"{name}\" é grande demais pra mim, porra. Até 50 MB."])
         except OSError:
             return self._say("confusa", [f"Não consegui abrir o \"{name}\"."])
-        for enc in ("utf-8-sig", "cp1252", "latin-1"):
-            try:
-                text = raw.decode(enc)
-                break
-            except UnicodeDecodeError:
-                continue
-        text = text.replace("\r\n", "\n").strip()
         if not text:
             return self._say("confusa", [f"O \"{name}\" tá vazio. Cê me mandou um nada, KKKKK."])
-        self.conv.remember(file={"name": name, "text": text[:FILE_CHARS], "size": len(text),
-                                 "cut": len(text) > FILE_CHARS})
+        self.files[path] = text
+        self.conv.remember(file={"name": name, "path": path, "size": len(text)})
         self.conv.add("user", f"📄 {name}", route="arquivo", file=name)
         self.changed.emit()
         q = question or "Lê esse arquivo que eu te mandei e me fala o que achou: do que se trata e o que chama atenção."
         self.state.emit("atencao")
         self.ask(q, router.Route("conversa", "", q))
+
+    def _file_text(self, f):
+        """Texto inteiro do arquivo da conversa (memória; relido do disco depois de reabrir a Ceci)."""
+        path = f.get("path")
+        if path and path not in self.files:
+            try:
+                self.files[path] = files.read(path)
+            except (OSError, ValueError):
+                return f.get("text")  # histórico antigo guardava o texto
+        return self.files.get(path) or f.get("text")
 
     # --- controle ---
     def cancel(self):

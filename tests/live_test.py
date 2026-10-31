@@ -182,6 +182,15 @@ ai.attach(big)
 wait(lambda: len(fake2.calls) > calls)
 check("arquivo grande: só o começo vai, e a IA sabe que foi cortado",
       "130000 caracteres" in fake2.calls[-1].message and "a" * 100001 not in fake2.calls[-1].message)
+from ceci.ia import files  # noqa: E402
+hay = "\n".join(f"linha {i} sobre nada de importante aqui" for i in range(40000))
+hay = hay[:600000] + "\nO Felipe Solo sobreviveu ao incêndio e virou o Executor.\n" + hay[600000:]
+part, how = files.excerpt(hay, "o que aconteceu com o Felipe Solo?")
+check("arquivo enorme: vão os trechos que falam da pergunta, dentro do limite",
+      "Felipe Solo sobreviveu" in part and len(part) <= files.LIMIT + 2000 and "felipe" in how)
+part, how = files.excerpt(hay, "me fala o que achou")
+check("arquivo enorme sem pergunta específica: começo e amostras", "trecho 1 de" in part and "amostras" in how)
+check("arquivo pequeno vai inteiro", files.excerpt("curtinho", "x") == ("curtinho", ""))
 check("etiqueta de humor em qualquer lugar/formato vira animação e some do texto",
       prompts.parse("*[curiosa]* Cecinha?") == ("Cecinha?", "curiosa")
       and prompts.parse("Opa, porra! [feliz]") == ("Opa, porra!", "feliz")
