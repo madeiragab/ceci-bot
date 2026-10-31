@@ -10,8 +10,10 @@ from PySide6.QtWidgets import QWidget
 from .engine import Player
 from .sprites import Sprites
 
-CANVAS_W, CANVAS_H, FOOT_MARGIN = 640, 520, 30  # em px de sprite (escala 1.0)
+CANVAS_W, CANVAS_H, FOOT_MARGIN = 640, 590, 100  # em px de sprite (escala 1.0); margem: pernas na barra
 DRAG_START = 6
+INTERACT = ("acenando", "feliz", "beijinho", "coracao", "fofa")  # clique ou menu Interagir
+PET_PASSES, PET_STROKE, PET_WINDOW = 5, 25, 3.0  # carinho: 5 idas e vindas (≥ 25 px) sobre a cabeça em 3 s
 SPIN_WINDOW, SPIN_PATH, SPIN_TURN = 1.5, 500, 3 * math.pi  # girada/sacudida: 1,5 volta (ou 3 idas e vindas)
 SPIN_AGAIN = 6.0  # s até poder reclamar de novo se continuar girando
 EYE_HOLD = 1.5       # s mínimos olhando numa direção antes de trocar
@@ -59,7 +61,9 @@ class CeciWindow(QWidget):
         self.press = None
         self.dragging = False
         self.drag_off = QPointF()
-        self.rub = []               # trajeto do cursor sobre a cabeça
+        self.rub = []               # momentos em que o cursor mudou de sentido sobre a cabeça
+        self.rub_last = None
+        self.rub_run = {"x": (0, 0.0), "y": (0, 0.0)}  # sentido e comprimento da passada atual
         self.last_pet = 0.0
         self.eyes_on = False
         self.eyes_idx = None
@@ -199,6 +203,8 @@ class CeciWindow(QWidget):
             self.prev_shift = old_foot - self.foot  # o quadro antigo some no lugar dele, sem pular
             self.fade_t0 = time.monotonic()
             self.fade_timer.start(max(16, 1000 // self.settings["fps"]))
+        if ex.get("sit") and self.settings["always_on_top"]:
+            self.raise_()  # pernas por cima da barra de tarefas: não deixa a barra cobrir
         if self.fall_v is not None and a and self.player.i == a.get("fall"):
             self.player.timer.stop()  # segura o quadro "caindo" até tocar o chão
         self.update()
@@ -247,7 +253,8 @@ class CeciWindow(QWidget):
     def play(self, aid, **kw):
         if self.exiting and aid != "saida":
             return False
-        if self.sprites.anims.get(aid, {}).get("edge") and not kw.pop("here", False):
+        here = kw.pop("here", False)
+        if self.sprites.anims.get(aid, {}).get("edge") and not here:
             x = self.edge_start(aid)
             if abs(x - self.foot.x()) > 8:
                 # depende da parede: anda até lá primeiro, e só então faz a animação (nada de teleporte)
@@ -448,14 +455,35 @@ class CeciWindow(QWidget):
             if self.dragging:
                 self._drag_to(gp + self.drag_off)
             return
-        # carinho por movimento curto sobre a cabeça (sem clicar)
+        # carinho: passar o mouse várias vezes pela cabeça (sem clicar)
         if self.settings["petting"] and self._hit(e.position()) == "head":
-            now = time.monotonic()
-            self.rub = [(t, p) for t, p in self.rub if now - t < 1.2] + [(now, e.position())]
-            travel = sum((b[1] - a[1]).manhattanLength() for a, b in zip(self.rub, self.rub[1:]))
-            if travel > 160 * self.sprites.scale / 0.55 * 0.55 * 1.8:
-                self.rub = []
-                self.pet()
+            self._rub(e.position())
+        else:
+            self.rub_last = None
+
+    def _rub(self, pos):
+        """Conta as idas e vindas do cursor sobre a cabeça; PET_PASSES delas em PET_WINDOW s = carinho."""
+        now = time.monotonic()
+        last, self.rub_last = self.rub_last, QPointF(pos)
+        self.rub = [t for t in self.rub if now - t < PET_WINDOW]
+        if last is None:
+            return
+        d = pos - last
+        for axis, v in (("x", d.x()), ("y", d.y())):
+            if not v:
+                continue
+            sgn = 1 if v > 0 else -1
+            run_dir, run_len = self.rub_run[axis]
+            if sgn == run_dir:
+                run_len += abs(v)
+            else:
+                if run_len >= PET_STROKE * self.sprites.scale:
+                    self.rub.append(now)
+                run_dir, run_len = sgn, abs(v)
+            self.rub_run[axis] = (run_dir, run_len)
+        if len(self.rub) >= PET_PASSES:
+            self.rub = []
+            self.pet()
 
     def mouseReleaseEvent(self, e):
         if e.button() != Qt.LeftButton or not self.press:
@@ -467,12 +495,13 @@ class CeciWindow(QWidget):
             return
         if self.player.aid in ("cochilo", "dormindo"):
             self.wake()
-        elif where == "head" and self.settings["petting"]:
-            self.pet()
-        elif where:
-            self.stop_walk()
+        elif where:  # clicar nela (cabeça ou corpo) = Interagir; carinho é passando o mouse na cabeça
             self.interaction.emit("clique")
-            self.play(random.choice(["acenando", "curiosa", "ajeitando", "acenando"]), force=True)
+            self.interact()
+
+    def interact(self, talk=False):
+        self.stop_walk()
+        self.play(random.choice(INTERACT), force=True, talk=talk)
 
     def pet(self):
         now = time.monotonic()

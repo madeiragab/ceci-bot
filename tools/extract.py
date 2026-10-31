@@ -34,6 +34,10 @@ SHEETS[56]["n"] = 4  # olhando para baixo (esq., centro, dir., dir.)
 SHEETS[51]["align"] = "torso"  # sentada balançando as pernas: pernas não podem mover o corpo
 # balanço (2-7): rosto travado no mesmo lugar (medido por tools/facescale.py); só as pernas se mexem
 SHEETS[51]["anchor"] = {2: [-12, -10], 3: [10, 7], 4: [1, 0], 5: [-4, 10], 6: [14, -7], 7: [-1, 0]}
+# sentada de verdade na beirada da barra de tarefas: o assento (fim das coxas, ~67 px acima dos pés) vai
+# para a linha do chão e as pernas balançam por cima da barra (antes ela sentava no ar)
+SIT_DROP = 67
+SHEETS[51]["anchor"] = {k: [dx, dy + SIT_DROP] for k, (dx, dy) in SHEETS[51]["anchor"].items()}
 SHEETS[5]["align"] = "torso"  # caminhada: pés abrem/fecham, o tronco é o ponto estável
 
 

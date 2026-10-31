@@ -29,12 +29,13 @@
 - **Tem rotina própria**: respira, pisca, ajeita os óculos, lê, toma café, brinca com o gato, cochila e passeia pela tela. Tudo isso por timers e sorteio, sem IA.
 - **Reage a você**:
   - **Mouse**: os olhos seguem o cursor quando você mexe rápido.
-  - **Carinho**: ela reage quando você clica na cabeça ou passa o mouse por cima.
-  - **Clique no corpo**: ela acena ou fica curiosa.
+  - **Clique**: clicar nela (cabeça ou corpo) é o mesmo que "Interagir": ela acena, fica feliz, manda beijinho ou coração.
+  - **Carinho**: passe o mouse para lá e para cá sobre a cabeça dela algumas vezes, sem clicar.
+- **Senta na barra de tarefas**: quando senta na beirada, fica apoiada no topo da barra com as pernas balançando por cima dela, em vez de flutuar.
 - **Pode ser arrastada**: ela fica pendurada enquanto você segura. Solta no ar, ela cai, sente o impacto e se levanta. Levada até a borda de baixo, pousa na hora.
 - **Transições suaves**: dissolve entre os quadros e entre as animações, sem teleportes. As atividades repetem só o "miolo" (ex.: folhear o livro) e só guardam as coisas quando ela vai fazer outra coisa.
 - **Sai com estilo**: ao fechar, ela anda até o canto mais próximo e sai correndo pela borda da tela. Depois volta só a mão para buscar o livro que caiu.
-- **Respeita o seu PC**: pausa em jogos e apps em tela cheia. Ao ser ocultada, todos os timers param. Tem modo econômico.
+- **Respeita o seu PC**: pausa em jogos e apps em tela cheia. Ao ser ocultada, todos os timers param. Tem modo econômico. Abre uma vez só: abrir de novo não cria uma segunda Ceci por cima da primeira.
 
 ## 🖼️ Galeria
 
@@ -76,8 +77,8 @@ O script gera `%LOCALAPPDATA%\Programs\Ceci Bot\Ceci Bot.exe` com PyInstaller e 
 | Ação | O que acontece |
 |---|---|
 | Mexer o mouse rápido perto dela | Ela acompanha o cursor com o olhar. Cada direção dura no mínimo 1,5 s, e depois ela espera 10 s para voltar a seguir. |
-| Clicar na cabeça ou passar o mouse por cima dela | Carinho |
-| Clicar no corpo | Acena, fica curiosa ou ajeita os óculos |
+| Clicar nela (cabeça ou corpo) | Interagir: acena, fica feliz, manda beijinho ou coração, e fala uma frase de clique |
+| Passar o mouse várias vezes pela cabeça (vai e volta) | Carinho |
 | Clicar e arrastar | Fica pendurada. Ao soltar, cai e pousa. |
 | Girar ou sacudir enquanto arrasta | Reclama ("VOU VOMITAR!") e pousa tonta |
 | Clique direito | Menu: Interagir, Falar algo, Passear, Ver animações, Mover para outro canto, Alterar tamanho, Pausar animações, Configurações, Ocultar, Sair |
@@ -149,6 +150,7 @@ python tests/speech_test.py   # balão letra a letra, fila sem cortar fala, tcha
 python tests/settings_test.py # tamanho escolhido continua ao abrir de novo
 python tests/edge_test.py     # anda até a parede antes de esconder; perna sai uma vez só na saída
 python tests/spin_test.py     # girar/sacudir no ar tem falas próprias; arrastar reto não
+python tests/interact_test.py # clique = Interagir, carinho passando o mouse, sentada na barra, uma Ceci só
 ```
 
 Os testes rodam sem abrir janela (`QT_QPA_PLATFORM=offscreen`) e usam uma pasta de configurações temporária.

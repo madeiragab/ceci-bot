@@ -85,6 +85,20 @@
     banco v1.0 e estão marcadas no `_sobre` do falas.json; total agora 262 frases em 31 categorias.
 - Tamanho "Mínima" (0,25, o menor que as configurações aceitam) no menu Alterar tamanho; conferido na
   tela com o balão legível (a fonte do balão não encolhe abaixo de 80 %).
+- Clique nela (cabeça ou corpo) = "Interagir" (acenando, feliz, beijinho, coração ou fofa; mesma lista do
+  menu, `INTERACT` em window.py) + fala de "clique". Clicar na cabeça não é mais carinho.
+- Carinho só passando o mouse pela cabeça várias vezes: conta as mudanças de sentido do cursor (passada
+  ≥ 25 px × escala, em x ou y); 5 idas e vindas em 3 s = carinho. Antes bastavam ~160 px de trajeto, e
+  passar o mouse uma vez por cima já disparava.
+- Sentada na borda (folha 51, `borda`): os quadros 2–7 descem 67 px (`SIT_DROP` em extract.py), o
+  assento fica na linha do chão (topo da barra de tarefas) e as pernas balançam por cima da barra.
+  Antes ela sentava no ar, com os pés no topo da barra. A janela cresceu (590 px de altura, 100 px abaixo
+  dos pés) para as pernas não serem cortadas; nos quadros sentados (`sit` no manifesto) a janela se põe
+  por cima de novo para a barra de tarefas não cobrir as pernas.
+- "Animações deram uma bugada": observei o app rodando com log de cada quadro e não houve erro nem quadro
+  fora do lugar. Vi duas Cecis abertas ao mesmo tempo (o .exe e uma de teste), uma por cima da outra, o
+  que parece animação quebrada. Agora só abre uma (mutex nomeado `CeciBot.SingleInstance`); abrir de
+  novo não faz nada. Se o problema voltar com uma Ceci só, ainda falta descobrir a causa.
 
 ## Testado de verdade
 - `tests/speech_test.py` (24 checagens): escreve letra a letra, balão acima da cabeça e dentro da
@@ -94,6 +108,11 @@
 - `tests/settings_test.py`: tamanho pelo diálogo e pelo menu continua ao abrir de novo.
 - `tests/spin_test.py`: arrastar reto não conta; girar fala "girando" (depois do arraste, na fila) e
   pousa "tonta"; sacudir de um lado para o outro também conta.
+- `tests/interact_test.py` (11 checagens): clique no corpo e na cabeça = Interagir com fala de clique;
+  uma passada só não é carinho, vai e volta 5 vezes é; sentada na borda as pernas descem abaixo do
+  chão, cabem na janela e o assento fica no chão (±12 px); a segunda Ceci não abre.
+- Sentada na barra na tela real (31/10, tamanho Média): assento no topo da barra de tarefas, pernas por
+  cima da barra na frente do relógio. Prévia offscreen em `_preview/sentada_barra.png`.
 - `tests/edge_test.py`: esconder do meio da tela e colada na borda anda antes, encosta (±4 px) e prende
   sem pulo para trás; saída na ordem 0,1,2,4,3,5,6,7. Prévias em `_preview/esconder_strip_*.png` e
   `_preview/saida_strip.png` conferidas.

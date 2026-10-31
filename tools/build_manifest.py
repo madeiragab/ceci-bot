@@ -111,6 +111,8 @@ anim("gato", "Interagindo com gato", "comportamento", S(18, 900, 700, 700, 800, 
      loop=[4, 5], hold=[10, 25], auto=2, sheet=18)
 anim("borda", "Sentada na borda", "comportamento", S(51, 500, 600, 900, 700, 900, 700, 900, 900, 600),
      loop=[2, 7], hold=[10, 25], auto=2, sheet=51)
+for _st in A["borda"]["seq"][2:8]:  # sentada na beirada da barra de tarefas (pernas por cima dela)
+    _st.append({"sit": 1})
 
 # ---------------- especiais (só visual nesta fase) ----------------
 anim("tarefa", "Mostrando tarefa", "especial",
