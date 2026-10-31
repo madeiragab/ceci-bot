@@ -106,6 +106,16 @@
   Arraste só começa com um puxão (> 22 px) ou segurando 0,25 s e mexendo > 6 px; antes 6 px bastavam e um
   clique tremido (ou toque no touchpad) levantava a Ceci.
 
+## Fase 3 — Cérebro: falas e animações vindas da IA (31/10)
+- `ceci/ia/live.py` (Mind): ao abrir (15 s), a cada 40 min e depois de uma conversa (8 min+), UM pedido em modo JSON
+  com personalidade + data/hora do PC + conversa recente (+ resumo da faculdade se permitido): ~70 falas para 30
+  situações do falas.json, humor e 2–4 vontades (animações com `auto`). Guardado em `mente_ia.json`.
+- Fala automática: a da IA primeiro (cada uma uma vez), falas.json de reserva. Rotina: vontades pesam 3x.
+- Conversa: o modelo recebe data e hora do PC; ação de roleplay na resposta (*bebe café*, *boceja*, *Bowie...*)
+  escolhe a animação (prompts.ACTIONS), senão o humor.
+- Testado de verdade: lote gerado em 13–34 s, 30 situações/69 falas, reagiu a "sábado à noite".
+  `tests/live_test.py` (19) com provedor falso.
+
 ## Fase 3 — Corrente de provedores (31/10)
 - `ceci/ia/chain.py`: tenta na ordem OpenAI (gpt-5-mini) → Claude (claude-haiku-5-5) → OmniRoute (localhost:20128)
   → Gemini 3.5-flash-lite → Groq (gpt-oss-120b, qwen3.8-27b, gpt-oss-20b) → Gemini 2.5-flash → Cerebras → GitHub Models

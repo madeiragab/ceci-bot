@@ -73,6 +73,10 @@ class APIProvider(AIProvider):
 
     def send_message(self, prompt, timeout):
         body, headers = self.request(prompt, self.key() or "")
+        if prompt.max_out:
+            for k in ("max_tokens", "max_completion_tokens"):
+                if k in body:
+                    body[k] = prompt.max_out
         return self.reply(self._post(body, headers, timeout))
 
     def _post(self, body, headers, timeout):
@@ -111,6 +115,8 @@ class OpenAICompat(APIProvider):
     def request(self, prompt, key):
         body = {"model": self.model, "messages": [{"role": "system", "content": prompt.system}] + turns(prompt),
                 **self.extra}
+        if prompt.json:
+            body["response_format"] = {"type": "json_object"}
         return body, ({"Authorization": f"Bearer {key}"} if key else {})
 
     def reply(self, d):

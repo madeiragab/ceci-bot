@@ -16,6 +16,7 @@ class Behavior(QObject):
         self.recent = []
         self.last_special = time.monotonic()
         self.last_user = time.monotonic()
+        self.mind = None  # cérebro (ceci/ia/live.py): o que ela tá com vontade de fazer fica mais provável
         win.became_idle.connect(self.schedule)
 
     def schedule(self):
@@ -76,6 +77,8 @@ class Behavior(QObject):
         for m in MICRO:
             if m in pool:
                 pool[m] *= 2
+        if self.mind:
+            pool = {k: v * self.mind.boost(k) for k, v in pool.items()}
         keys = list(pool)
         return random.choices(keys, weights=[pool[k] for k in keys])[0]
 

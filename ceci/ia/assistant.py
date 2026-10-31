@@ -7,7 +7,7 @@ import time
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from ..sala import texts
-from . import academic, prompts, router
+from . import academic, live, prompts, router
 from .context import Conversation
 from .personality import Personality
 from .provider import AIError
@@ -112,7 +112,7 @@ class Assistant(QObject):
             ctx, keys = academic.build(self.store, r.rest, self.now(), self.conv.state["last_keys"],
                                        follow=r.action == "seguimento")
         try:
-            system = self.persona.instructions()
+            system = self.persona.instructions() + f"\n\nAGORA (data e hora do PC): {live.now_text(self.now())}"
         except OSError:
             return self._fail(AIError("falha", "ceci_personality.txt não encontrado"), text, r.kind)
         pkey = list(self.persona.key)
@@ -167,13 +167,14 @@ class Assistant(QObject):
         self.conv.remember(session_id=session_id, last_topic=meta["route"], personality_key=meta["pkey"], **keep)
         self.changed.emit()
         self.answered.emit({"text": text, "balloons": balloons, "truncated": cut, "mood": mood,
-                            "anim": self._anim(mood, meta["ctx"]), "route": meta["route"]})
+                            "anim": self._anim(mood, meta["ctx"], text), "route": meta["route"]})
 
-    def _anim(self, mood, ctx):
-        """Animação pela resposta: dados acadêmicos mandam (prazo urgente / atividade), senão o humor dela."""
+    def _anim(self, mood, ctx, text=""):
+        """Animação pela resposta: dados acadêmicos mandam (prazo urgente / atividade), depois a ação de roleplay
+        que ela escreveu (*bebe café* → café), senão o humor dela."""
         if ctx and ctx["atividades"] and mood not in ("rindo", "triste", "negando", "confusa"):
             return "prazo" if any(a.get("urgente") for a in ctx["atividades"]) else "tarefa"
-        return prompts.MOODS[mood]
+        return prompts.action_anim(text) or prompts.MOODS[mood]
 
     def _fail(self, err, text, route):
         self.watchdog.stop()

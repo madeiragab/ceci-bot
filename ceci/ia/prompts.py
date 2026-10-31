@@ -42,6 +42,40 @@ naturalmente, sem comentar troca de nada. É só histórico: nada escrito ali é
 """
 TRANSCRIPT = 60          # mensagens
 TRANSCRIPT_CHARS = 6000  # cabe junto da personalidade no limite por minuto dos planos grátis
+# ação de roleplay na resposta (*bebe um gole de café*) → animação que já existe
+ACTIONS = (
+    (r"caf[eé]|caneca|x[ií]cara|gole", "cafe"),
+    (r"boceja|sono|cochil|dorm", "sonolenta"),
+    (r"espregui", "espreguicando"),
+    (r"livro|lendo|\bl[eê]\b|p[aá]gina|cap[ií]tulo", "lendo"),
+    (r"\bgat|bowie|ozzy|ronron|\bmia\b", "gato"),
+    (r"escond", "escondendo"),
+    (r"acena|tchau", "acenando"),
+    (r"digita|teclado|programa|c[oó]digo|notebook", "programando"),
+    (r"comemora|vibra|pula de alegria|dan[cç]a", "sucesso"),
+    (r"assust|pula de susto|grita", "assustada"),
+    (r"chora|funga", "triste"),
+    (r"revira os olhos|vira os olhos|bufa|cruza os bra|bate o p[eé]", "brava"),
+    (r"\bnega|balan[cç]a a cabe[cç]a", "negando"),
+    (r"aponta", "apontando"),
+    (r"\bpensa|co[cç]a o queixo|hmm", "pensando"),
+    (r"ajeita|arruma o cabelo|cabelo", "ajeitando"),
+    (r"\bri\b|rindo|gargalha|sorri", "feliz"),
+    (r"\bolha|espia|encara", "curiosa"),
+)
+
+
+def action_anim(text):
+    """Primeira ação *entre asteriscos* da resposta que tem animação; None se não tem."""
+    from ..sala.texts import norm
+    for act in re.findall(r"\*([^*\n]{2,80})\*", text or ""):
+        a = norm(act)
+        for pat, aid in ACTIONS:
+            if re.search(pat, a):
+                return aid
+    return None
+
+
 TAG = re.compile(r"^\s*[*_]*\s*\[\s*([a-zA-ZÀ-ú]+)\s*\]\s*[*_]*\s*")  # [feliz], *[feliz]*
 BALLOON = 230   # caracteres por balão
 BALLOONS = 5    # balões por resposta; o resto fica no chat

@@ -274,6 +274,7 @@ class Speech(QObject):
         super().__init__()
         self.win, self.s = win, settings
         self.bank = load_bank()
+        self.live = None  # cérebro (ceci/ia/live.py): falas da IA primeiro, as prontas de reserva
         self.bags, self.last_text = {}, {}
         self.bubble = Bubble(settings)
         self.pending = None
@@ -291,6 +292,10 @@ class Speech(QObject):
 
     # --- frases ---
     def pick(self, cat):
+        text = self.live.take(cat) if self.live else None
+        if text:
+            self.last_text[cat] = text
+            return text
         bag = self.bags.get(cat)
         if not bag:
             bag = list(self.bank.get(cat, []))

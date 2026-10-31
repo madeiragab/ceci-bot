@@ -12,6 +12,7 @@ from PySide6.QtWidgets import QApplication, QSystemTrayIcon
 from ceci.behavior import Behavior
 from ceci.command import HELP, CommandBox
 from ceci.ia import make_provider
+from ceci.ia.live import Mind
 from ceci.ia.assistant import Assistant
 from ceci.ia.chat import ChatWindow
 from ceci.sala import texts
@@ -72,6 +73,15 @@ class App:
         self.ai.failed.connect(lambda f: self._say(f["anim"], f["say"]))
         self.ai.speak.connect(self._say)
         self.ai.local.connect(self.run_local)
+        # cérebro: falas soltas e vontades vindas da IA (outra corrente, mesmas pausas de limite)
+        mp = make_provider(self.s["ai_provider"], self.s["ai_chain"])
+        if hasattr(mp, "paused") and hasattr(self.ai.provider, "paused"):
+            mp.paused = self.ai.provider.paused
+        wants = [a for a, d in self.win.sprites.anims.items() if d.get("auto")]
+        self.mind = Mind(mp, self.ai.persona, self.ai.conv, self.sala.store, self.s, wants)
+        self.speech.live = self.mind
+        self.beh.mind = self.mind
+        self.ai.answered.connect(lambda a: self.mind.maybe_refresh(after_chat=True))
         self.tray = Tray(self, ICON)
         self.tray.messageClicked.connect(self._toast_clicked)
         self.toast_url, self.toast_action = None, self.tell_activities
@@ -92,6 +102,7 @@ class App:
         self.speech.restart_chat()
         self.win.update_eye_timer()
         self.win.update_breath()
+        self.mind.start()
         self.sala.start()  # consulta do dia pendente (se houver) e lembretes: depois que ela entra na tela
 
     # --- menu ---

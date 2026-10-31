@@ -22,6 +22,8 @@ class Prompt:
     session_id: str = None      # conversa do provedor que deve continuar (quando ele guarda a conversa)
     transcript: str = ""        # a conversa atual em markdown: vai inteira quando outra IA assume
     last_provider: str = None   # quem respondeu a anterior ("serviço/modelo")
+    max_out: int = None         # tokens de resposta, quando o pedido precisa de mais que o padrão
+    json: bool = False          # pede resposta em JSON válido (modo JSON da API, quando ela tem)
 
 
 @dataclass
