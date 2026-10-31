@@ -39,10 +39,10 @@ CHAIN = [
     ("openai", "gpt-5-mini", {"reasoning_effort": "minimal"}),
     ("anthropic", "claude-haiku-5-5", {}),
     ("omniroute", "auto", {}),
+    ("gemini", "gemini-3.5-flash-lite", {"reasoning_effort": "low"}),  # melhor no tom da Ceci: antes do Groq
     ("groq", "openai/gpt-oss-120b", {"reasoning_effort": "low"}),
     ("groq", "qwen/qwen3.8-27b", {"reasoning_effort": "none"}),
     ("groq", "openai/gpt-oss-20b", {"reasoning_effort": "low"}),
-    ("gemini", "gemini-3.5-flash-lite", {"reasoning_effort": "low"}),
     ("gemini", "gemini-2.5-flash", {"reasoning_effort": "low"}),
     ("cerebras", "gpt-oss-120b", {}),
     ("github", "openai/gpt-4.1-mini", {}),

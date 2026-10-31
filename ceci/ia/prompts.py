@@ -91,7 +91,9 @@ def plain(text):
     t = re.sub(r"```.*?```", " (o código tá no chat) ", text, flags=re.S)
     t = re.sub(r"`([^`]*)`", r"\1", t)
     t = re.sub(r"\*\*([^*]+)\*\*|__([^_]+)__", lambda m: m.group(1) or m.group(2), t)
-    t = re.sub(r"(?<!\w)[*_]([^*_\n]+)[*_](?!\w)", r"\1", t)
+    # *ação* fica no balão (é a personagem fazendo algo); */ação/* e /ação/ viram *ação*
+    t = re.sub(r"\*+\s*/([^/*\n]+)/\s*\*+|(?<!\S)/([^/\n]{3,})/(?!\S)", lambda m: f"*{m.group(1) or m.group(2)}*", t)
+    t = re.sub(r"(?<!\w)_([^_\n]+)_(?!\w)", r"\1", t)
     t = re.sub(r"^\s{0,3}#{1,6}\s*", "", t, flags=re.M)
     t = re.sub(r"^\s*[-*•]\s+", "• ", t, flags=re.M)
     t = re.sub(r"\[([^\]]+)\]\((?:https?://[^)]+)\)", r"\1", t)

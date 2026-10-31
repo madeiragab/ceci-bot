@@ -295,8 +295,7 @@ with open(SETTINGS, "w", encoding="utf8") as fh:
     json.dump({"ai_provider": "gemini_web"}, fh)
 check("settings antigo (gemini_web, bloqueado) passa pra corrente", Settings()["ai_provider"] == "corrente")
 check("ordem padrão: GPT → Claude → OmniRoute → grátis por dia",
-      [s for s, _, _ in CHAIN][:4] == ["openai", "anthropic", "omniroute", "groq"]
-      and [s for s, _, _ in CHAIN].index("gemini") > [s for s, _, _ in CHAIN].index("groq"))
+      [s for s, _, _ in CHAIN][:5] == ["openai", "anthropic", "omniroute", "gemini", "groq"])
 custom = build(["groq/openai/gpt-oss-20b", "inexistente/x"])
 check("ai_chain troca a ordem (e ignora serviço desconhecido)",
       [p.id for p in custom] == ["groq/openai/gpt-oss-20b"] and custom[0].extra.get("reasoning_effort") == "low")

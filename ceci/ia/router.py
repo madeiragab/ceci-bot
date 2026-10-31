@@ -49,7 +49,10 @@ WEAK = re.compile(r"\b(?:trabalhos?|entregas?|entregar|prazos?|vence|vencendo|pr
 MINE = re.compile(r"\b(?:tenho|tem algum\w*|meu|meus|minha|minhas|preciso|devo|eu|pra mim)\b")
 OTHER = re.compile(r"\b(?:dela|dele|delas|deles)\b")
 WHEN = re.compile(r"\b(?:hoje|amanha|semana|esse mes|este mes|fim de semana)\b")
-FOLLOW = re.compile(r"^(?:e |mas |entao )|\b(?:delas|dessas|desses|deles|essa|esse|isso|primeiro|primeira|qual)\b")
+FOLLOW = re.compile(r"^(?:e (?:a|o|as|os|de|da|do|qual|quais|quando)\b|mas (?:qual|quando)\b)"
+                    r"|\b(?:delas|dessas|desses|deles|primeiro|primeira|qual|quais|quando|mais urgente)\b")
+# agradecimento, elogio ou papo depois das atividades é conversa, não "repete a lista"
+CHAT = re.compile(r"\b(?:valeu|obrigad\w*|brigad\w*|vlw|tmj|beleza|blz|relaxa|linda|gata|ja falou)\b")
 
 
 def clean(text):
@@ -76,6 +79,6 @@ def route(text, last_topic=None, courses=(), consent_pending=False):
     if (ACADEMIC.search(t) or any(c and c in t for c in courses)
             or (WEAK.search(t) and (MINE.search(t) or WHEN.search(t)) and not OTHER.search(t))):
         return Route("academico", "", t)
-    if last_topic == "academico" and len(t.split()) <= 9 and FOLLOW.search(t):
+    if last_topic == "academico" and len(t.split()) <= 9 and FOLLOW.search(t) and not CHAT.search(t):
         return Route("academico", "seguimento", t)
     return Route("conversa", "", t)

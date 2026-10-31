@@ -108,7 +108,7 @@
 
 ## Fase 3 — Corrente de provedores (31/10)
 - `ceci/ia/chain.py`: tenta na ordem OpenAI (gpt-5-mini) → Claude (claude-haiku-5-5) → OmniRoute (localhost:20128)
-  → Groq (gpt-oss-120b, qwen3.8-27b, gpt-oss-20b) → Gemini (3.5-flash-lite, 2.5-flash) → Cerebras → GitHub Models
+  → Gemini 3.5-flash-lite → Groq (gpt-oss-120b, qwen3.8-27b, gpt-oss-20b) → Gemini 2.5-flash → Cerebras → GitHub Models
   → OpenRouter. Quem bate no limite fica pausado pelo tempo que o serviço informa (3 h quando é a cota do dia/crédito).
   Ordem trocável em settings.json (`ai_chain`). Uma chave por serviço; sem rodízio de contas.
 - Chaves: `%APPDATA%\Ceci Bot\chaves_ia.bin` (DPAPI), janela botão direito → Abrir chat → Chaves. Nunca no repo/log.
