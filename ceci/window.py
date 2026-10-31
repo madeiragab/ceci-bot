@@ -40,7 +40,8 @@ class CeciWindow(QWidget):
 
         self.cur = None          # Frame atual
         self.step = None
-        self.prev = None         # (Frame, QPointF âncora) p/ transição suave
+        self.prev = None         # Frame anterior p/ transição suave
+        self.prev_shift = QPointF()  # onde ele estava em relação aos pés atuais (pés presos à borda mudam)
         self.fade_t0 = 0.0
         self.fade_ms = FADE_MS
         self.fade_timer = QTimer(self, timeout=self._fade_tick)
@@ -159,10 +160,11 @@ class CeciWindow(QWidget):
         return self.sprites.get(st[0], st[1], self.player.mirror)
 
     def _on_frame(self, st, new):
-        old = self.cur
+        old, old_st = self.cur, self.step
         self.step = st
         self.cur = self._frame(st)
         ex = st[3] if len(st) > 3 else {}
+        old_foot = QPointF(self.foot)
         if "pin" in ex and self.cur:
             # encosta a borda do quadro na borda da tela (saída / esconder); espelhada = borda esquerda
             d = ex.get("dx", 0) * self.sprites.scale
@@ -184,13 +186,15 @@ class CeciWindow(QWidget):
         if old is not None and old is not self.cur and not self.settings["eco"] and not self.dragging:
             # toda troca de pose dissolve suavemente (sem "slideshow"); troca de animação um pouco mais longa
             dur = st[2] / max(0.1, self.settings["speed"])
-            walking = (self.player.current and self.player.current.get("walk")) or "mv" in ex
+            ran = bool(old_st) and len(old_st) > 3 and "mv" in old_st[3]  # saindo da corrida: corte seco também
+            walking = (self.player.current and self.player.current.get("walk")) or "mv" in ex or ran
             # quadros com deslocamento (andar/correr): sem dissolve, senão um "fantasma" arrasta atrás dela
             if new:
                 self.fade_ms = 120 if "mv" in ex else FADE_MS
             else:
                 self.fade_ms = 0 if walking else min(FADE_MS, max(60, dur * 0.5))
             self.prev = old if self.fade_ms else None
+            self.prev_shift = old_foot - self.foot  # o quadro antigo some no lugar dele, sem pular
             self.fade_t0 = time.monotonic()
             self.fade_timer.start(max(16, 1000 // self.settings["fps"]))
         if self.fall_v is not None and a and self.player.i == a.get("fall"):
@@ -213,14 +217,14 @@ class CeciWindow(QWidget):
             # dissolve sem "buraco" de transparência: pose antiga some por baixo, nova surge por cima
             t = min(1.0, (time.monotonic() - self.fade_t0) / (self.fade_ms / 1000))
             p.setOpacity(min(1.0, 2 - 2 * t))
-            self._draw(p, self.prev)
+            self._draw(p, self.prev, self.prev_shift)
         if self.cur:
             p.setOpacity(min(1.0, 2 * t))
             self._draw(p, self.cur)
         p.end()
 
-    def _draw(self, p, f):
-        pos = QPointF(self.anchor.x() + f.ox, self.anchor.y() + f.oy)
+    def _draw(self, p, f, shift=QPointF()):
+        pos = QPointF(self.anchor.x() + f.ox, self.anchor.y() + f.oy) + shift
         k = self._breath()
         if k:  # peito sobe/desce ~1%, ancorado nos pés (o desenho não muda)
             p.save()
@@ -241,10 +245,27 @@ class CeciWindow(QWidget):
     def play(self, aid, **kw):
         if self.exiting and aid != "saida":
             return False
+        if self.sprites.anims.get(aid, {}).get("edge") and not kw.pop("here", False):
+            x = self.edge_start(aid)
+            if abs(x - self.foot.x()) > 8:
+                # depende da parede: anda até lá primeiro, e só então faz a animação (nada de teleporte)
+                self.walk_to(x, on_done=lambda: self.play(aid, here=True, **{**kw, "force": True}), fast=True)
+                return True
         self.eyes_off()
         if kw.pop("talk", False):
             self.talk_aid = aid
         return self.player.play(aid, mirror=kw.pop("mirror", False), **kw)
+
+    def edge_start(self, aid):
+        """Onde começar uma animação presa à parede: depois dos passos dela ("mv"), o último quadro solto
+        encosta na borda da tela, e o primeiro quadro preso ("pin") continua dali sem pular."""
+        a, s = self.sprites.anims[aid], self.sprites.scale
+        seq = a["seq"]
+        p = next(i for i, st in enumerate(seq) if len(st) > 3 and "pin" in st[3])
+        f = self.sprites.get(seq[p - 1][0], seq[p - 1][1])
+        dist = sum(st[3]["mv"] * s * st[2] / 1000 / max(0.1, self.settings["speed"])
+                   for st in seq[:p] if len(st) > 3 and "mv" in st[3])
+        return self.area().right() + 1 - (f.ox + f.w) - dist
 
     def is_idle(self):
         return self.player.aid == "idle" and not self.dragging and not self.eyes_on

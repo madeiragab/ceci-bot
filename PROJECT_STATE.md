@@ -52,6 +52,14 @@
   à borda: 4/6/7 têm o corte da tela no desenho; 3 e 5 (só o livro) ficam onde a mão o pega no quadro 6
   (−54/−50 px na arte original, convertidos pela escala da folha no build_manifest).
 
+- Saída sem a perna aparecendo duas vezes: ordem agora corrida (0–2) → meio fora da tela (4) → só o
+  livro (3, 5) → mão buscando (6, 7). Antes era 0–2 → livro → 4 → livro → mão, e ela "voltava" na borda.
+  Quadro logo depois da corrida entra com corte seco (o dissolve mostrava dois corpos), e todo dissolve
+  desenha o quadro anterior onde ele estava (pés presos à borda mudam de lugar entre quadros).
+- Animações presas à parede (`edge` no manifesto; hoje o esconder) andam até a borda antes de começar,
+  de qualquer origem (rotina, painel, menu). O ponto de partida (`edge_start`) é calculado para que,
+  depois dos passos da própria animação, a agachada encoste na borda e o quadro preso continue dali.
+  Antes, perto da borda ela pulava direto para o quadro 4 e era teleportada ao prender.
 - Saída: folha 21 entrou na paleta única (cabelo estava mais vermelho; roupa fica sem ajuste porque
   metade dos quadros é só o livro/mão). Quadros com deslocamento (andar/correr) sem dissolve, para não
   deixar "fantasma" arrastando atrás dela.
@@ -78,6 +86,9 @@
   (início → clique → arraste → pouso) sem cortar nenhuma; ao lado da cabeça quando arrastada lá no
   alto; sem repetição; intervalo das automáticas; desligar; some sozinho; tchau antes de correr.
 - `tests/settings_test.py`: tamanho pelo diálogo e pelo menu continua ao abrir de novo.
+- `tests/edge_test.py`: esconder do meio da tela e colada na borda anda antes, encosta (±4 px) e prende
+  sem pulo para trás; saída na ordem 0,1,2,4,3,5,6,7. Prévias em `_preview/esconder_strip_*.png` e
+  `_preview/saida_strip.png` conferidas.
 - Falas na tela real (31/10): frase de início escrevendo, clique e carinho durante uma frase saem
   depois dela, arraste com o mouse real (pendurada → queda → "Meus óculos quase foram pro caralho!").
 - Medição 31/10 com falas (bateria, 8 núcleos): .exe 60 s com rotina automática: CPU 0,47 % do total,

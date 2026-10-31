@@ -146,6 +146,7 @@ python tests/quit_test.py     # anda até o canto e sai pela borda (dos dois lad
 python tests/smoke_test.py    # toca todas as animações sem erro nem quadro faltando
 python tests/speech_test.py   # balão letra a letra, fila sem cortar fala, tchau antes de sair
 python tests/settings_test.py # tamanho escolhido continua ao abrir de novo
+python tests/edge_test.py     # anda até a parede antes de esconder; perna sai uma vez só na saída
 ```
 
 Os testes rodam sem abrir janela (`QT_QPA_PLATFORM=offscreen`) e usam uma pasta de configurações temporária.

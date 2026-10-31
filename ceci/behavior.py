@@ -48,16 +48,7 @@ class Behavior(QObject):
             d = random.choices(sides, weights=[room[x] for x in sides])[0]
             w.walk_to(w.foot.x() + d * min(want, room[d]))
             return
-        if aid == "escondendo":
-            r = w.area().right() + 1
-            s = w.sprites.scale
-            if w.foot.x() > r - 260 * s:
-                # já perto da borda direita: não anda para o lado, só agacha e se esconde
-                w.play("escondendo", force=True, start=4)
-            else:
-                w.walk_to(r - 230 * s, on_done=lambda: w.play("escondendo", force=True))
-        else:
-            w.play(aid)
+        w.play(aid)  # animações presas à parede (esconder) andam até a borda sozinhas antes
         self.recent = (self.recent + [aid])[-4:]
         if w.sprites.anims.get(aid, {}).get("special"):
             self.last_special = time.monotonic()

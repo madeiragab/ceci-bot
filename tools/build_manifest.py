@@ -53,8 +53,10 @@ anim("entrada", "Entrada pela porta", "básico", S(6, 700, 650, 450, 550, 450, 9
 # direita do desenho; 3 e 5 (só o livro) ficam onde a mão o pega no quadro 6: -54/-50 px na arte original
 _s21 = json.load(open(os.path.join(ROOT, "assets", "frames.json"), encoding="utf8"))["21"]["scale"]
 anim("saida", "Saída correndo da tela", "básico",
+     # a perna aparece uma vez só: o quadro 4 (meio fora da tela) emenda direto na corrida, depois
+     # só o livro (3, 5) e a mão voltando para buscá-lo (6, 7)
      [[21, 0, 220, {"mv": 300}], [21, 1, 220, {"mv": 300}], [21, 2, 240, {"mv": 300}],
-      [21, 3, 650, {"pin": "right", "dx": round(-54 * _s21)}], [21, 4, 550, {"pin": "right"}],
+      [21, 4, 550, {"pin": "right"}], [21, 3, 650, {"pin": "right", "dx": round(-54 * _s21)}],
       [21, 5, 700, {"pin": "right", "dx": round(-50 * _s21)}], [21, 6, 650, {"pin": "right"}],
       [21, 7, 550, {"pin": "right"}], [0, -1, 600]], next=None, prio=9, sheet=21, mirror=True)
 
