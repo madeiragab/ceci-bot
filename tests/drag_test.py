@@ -43,9 +43,9 @@ def lift():
 
 def t1():
     lift()
-    check("levantada: susto → pendurada (antes do final)", win.player.i <= a["loop"][1])
+    check("levantada: susto -> pendurada (antes do final)", win.player.i <= a["loop"][1])
     win._drag_to(QPointF(win.foot.x(), win.ground() + 50))  # empurra até a borda de baixo
-    check("encostou embaixo → último quadro na hora", win.player.aid == "arrastada" and win.player.i == last)
+    check("encostou embaixo -> último quadro na hora", win.player.aid == "arrastada" and win.player.i == last)
     check("arraste encerrado e pés no chão", not win.dragging and abs(win.foot.y() - win.ground()) < 1)
     QTimer.singleShot(1500, t2)
 
@@ -53,12 +53,12 @@ def t1():
 def t2():
     lift()
     win._end_drag()  # solta no ar
-    check("solta no ar → quadro 'caindo'", win.player.i == a["fall"] and win.fall_v is not None)
+    check("solta no ar -> quadro 'caindo'", win.player.i == a["fall"] and win.fall_v is not None)
     QTimer.singleShot(1200, t3)
 
 
 def t3():
-    check("tocou o chão → impacto (ou depois dele)", win.fall_v is None and
+    check("tocou o chão -> impacto (ou depois dele)", win.fall_v is None and
           (win.player.aid != "arrastada" or win.player.i >= a["land"]))
     app.exit(1 if fails else 0)
 

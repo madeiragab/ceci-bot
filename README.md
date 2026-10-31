@@ -6,14 +6,14 @@
 
 <p align="center">
   Uma mascote chibi animada que mora na área de trabalho do Windows.<br>
-  <b>100% offline</b> · <b>sem IA</b> · <b>leve</b> (≈0,5% de CPU e ~60 MB de RAM, medidos)
+  <b>sem IA</b> · <b>leve</b> (≈0,5% de CPU e ~70 MB de RAM, medidos) · <b>avisa os prazos da Sala Virtual</b>
 </p>
 
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white">
   <img alt="PySide6" src="https://img.shields.io/badge/Qt-PySide6-41CD52?logo=qt&logoColor=white">
   <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white">
-  <img alt="Offline" src="https://img.shields.io/badge/rede-nenhuma%20conex%C3%A3o-8A2BE2">
+  <img alt="Rede" src="https://img.shields.io/badge/rede-s%C3%B3%20a%20Sala%20Virtual-8A2BE2">
 </p>
 
 <p align="center">
@@ -36,6 +36,44 @@
 - **Transições suaves**: dissolve entre os quadros e entre as animações, sem teleportes. As atividades repetem só o "miolo" (ex.: folhear o livro) e só guardam as coisas quando ela vai fazer outra coisa.
 - **Sai com estilo**: ao fechar, ela anda até o canto mais próximo e sai correndo pela borda da tela. Depois volta só a mão para buscar o livro que caiu.
 - **Respeita o seu PC**: pausa em jogos e apps em tela cheia. Ao ser ocultada, todos os timers param. Tem modo econômico. Abre uma vez só: abrir de novo não cria uma segunda Ceci por cima da primeira.
+
+## 🎓 Sala Virtual (Fase 2)
+
+A Ceci cuida dos prazos da [Sala Virtual do IFSULDEMINAS — Muzambinho](https://salavirtual2.muz.ifsuldeminas.edu.br) (Moodle) para nenhuma entrega passar despercebida. Sem IA, sem serviço pago e só leitura: ela nunca envia, responde, tenta questionário nem muda nada na sua conta.
+
+**Conectar**: Configurações → **Conectar Sala Virtual**. Abre a página oficial de login numa janela do Edge; você digita CPF e senha lá. A Ceci não vê nem guarda a senha. Ela guarda só os cookies da sessão, cifrados pelo Windows (DPAPI), e fecha o navegador.
+
+**Uma consulta automática por dia** (padrão 08:00, horário de São Paulo, configurável). Se o PC estiver desligado no horário, a consulta do dia acontece quando o app abrir. Se falhar, ela avisa e não tenta de novo sozinha: use **Conferir agora**, que não gasta a consulta automática. Entre as consultas não roda nada: nenhum navegador, nenhuma checagem de internet.
+
+**O que ela lê**: as suas disciplinas, a Linha do tempo, o Calendário (do mês passado até 6 meses à frente), o conteúdo de cada disciplina e a página de cada tarefa e questionário (status de envio). Cada atividade é identificada pelo id do Moodle, então a mesma atividade vista em várias fontes não duplica.
+
+**Lembretes** (calculados com os dados salvos, sem consultar o Moodle de novo): 7 dias, 3 dias, 24 h e 2 h antes, no dia e quando atrasa. Cada aviso sai uma vez só por atividade e prazo. Prazo mudou? Os lembretes são refeitos. O Moodle confirmou a entrega? Os lembretes param. Há horário silencioso e respeito à tela cheia, com opção para os alertas importantes.
+
+**Como ela avisa**: notificação do Windows (clicar abre a atividade), cartão ao lado dela com **Abrir no Moodle**, animação e fala:
+
+| Evento | Animação | Fala |
+|---|---|---|
+| Conferindo a Sala Virtual | Conferindo Sala Virtual | — |
+| Gravando os dados | Atualizando dados | — |
+| Atividade nova | Mostrando tarefa | "Opa! Temos atividade nova!" + nome e prazo |
+| Prazo chegando (7 e 3 dias) | Mostrando lembrete | "Pssiu! Olha a data dessa entrega!" |
+| Prazo urgente (24 h, no dia, 2 h, atraso) | Prazo urgente | "CARALHO, ISSO VENCE HOJE!" (só quando vence hoje mesmo) |
+| Vários avisos juntos | Resumo do dia | um resumo, em vez de vários balões |
+| Consulta concluída | Sucesso | "Prontinho! Sua lista tá atualizada." |
+| Falha (sessão, internet, consulta) | Erro / Confusa | a frase do que aconteceu de verdade |
+
+As animações "Sincronização falhou" e "Sem internet" não existem nas spritesheets, então a falha usa **Erro** e a falta de internet usa **Confusa**. Nenhum quadro foi inventado.
+
+**Menu**: **Minhas atividades** (pendentes, atrasadas, próxima entrega, filtros por disciplina e status, botão para abrir cada atividade), **Resumo da faculdade** (hoje, esta semana, atrasadas, novidades e mudanças de prazo) e **Conferir Sala Virtual agora**. Tudo funciona offline com os dados da última consulta e sempre mostra quando ela foi feita.
+
+**Status de cada atividade**: pendente, entrega confirmada pelo Moodle, concluída (critério do Moodle), atrasada, sem prazo definido, status desconhecido ou marcada por você. "Já fiz" é só uma marca sua: não conta como entrega confirmada. Rascunho salvo também não conta.
+
+**Limites honestos**:
+- A Sala Virtual está com os web services do Moodle desligados, então não existe API para aluno. A Ceci lê pelas mesmas chamadas que o Painel do Moodle usa, com a sua sessão.
+- A sessão do Moodle expira depois de 8 h sem uso. Se ela expirou na hora da consulta, a Ceci pede para você entrar de novo. Se o calendário exportado do Moodle estiver disponível, ela ainda confere os prazos por ele, mas avisa que o status de envio não foi conferido.
+- Com uma consulta por dia, algo publicado depois da consulta só aparece na próxima (ou em **Conferir agora**). Por isso a data da última sincronização fica sempre à vista.
+
+Dados locais: `%APPDATA%\Ceci Bot\sala_virtual.db` (SQLite), `sala_virtual.sessao` (cifrado) e `sala_virtual.log` (sem cookies, chaves nem senhas). **Desconectar e apagar sessão** apaga a sessão e encerra o login no Moodle.
 
 ## 🖼️ Galeria
 
@@ -62,7 +100,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Use `pythonw main.py` para abrir sem console. O app só precisa do `PySide6-Essentials`.
+Use `pythonw main.py` para abrir sem console. O app precisa do `PySide6-Essentials`; a Sala Virtual usa também o `playwright` (só para abrir a janela de login no Edge que já vem no Windows, sem baixar navegador).
 
 ### Gerar o executável
 
@@ -81,7 +119,7 @@ O script gera `%LOCALAPPDATA%\Programs\Ceci Bot\Ceci Bot.exe` com PyInstaller e 
 | Passar o mouse várias vezes pela cabeça (vai e volta) | Carinho |
 | Clicar e arrastar | Fica pendurada. Ao soltar, cai e pousa. |
 | Girar ou sacudir enquanto arrasta | Reclama ("VOU VOMITAR!") e pousa tonta |
-| Clique direito | Menu: Interagir, Falar algo, Passear, Ver animações, Mover para outro canto, Alterar tamanho, Pausar animações, Configurações, Ocultar, Sair |
+| Clique direito | Menu: Interagir, Falar algo, Passear, Ver animações, Mover para outro canto, Alterar tamanho, Minhas atividades, Resumo da faculdade, Conferir Sala Virtual agora, Pausar animações, Configurações, Ocultar, Sair |
 | Ícone na bandeja | Mostrar, Ocultar, Pausar animações, Configurações, Sair |
 
 ## ⚙️ Configurações
@@ -151,7 +189,11 @@ python tests/settings_test.py # tamanho escolhido continua ao abrir de novo
 python tests/edge_test.py     # anda até a parede antes de esconder; perna sai uma vez só na saída
 python tests/spin_test.py     # girar/sacudir no ar tem falas próprias; arrastar reto não
 python tests/interact_test.py # clique = Interagir, carinho passando o mouse, sentada na barra, uma Ceci só
+python tests/sala_test.py     # Sala Virtual: os 18 cenários obrigatórios com um Moodle falso local
+python tests/sala_app_test.py # a Ceci reage à consulta com as animações e falas certas
 ```
+
+Os testes da Sala Virtual usam um Moodle de mentira em `127.0.0.1` (`tests/fake_moodle.py`) com dados fictícios. Nenhuma conta real é usada.
 
 Os testes rodam sem abrir janela (`QT_QPA_PLATFORM=offscreen`) e usam uma pasta de configurações temporária.
 
@@ -167,11 +209,14 @@ O balão só usa timer enquanto escreve ou está na tela. Falando sem parar, ele
 
 Quando a Ceci é ocultada, os timers param. O modo econômico desliga a respiração e reduz as atualizações.
 
+**Com a Fase 2** (medido em 31/10): o .exe parado, sem consulta rodando, ficou em 0,09% de CPU, 68 MB de working set, 33 MB privados, nenhum processo filho e nenhuma conexão. Uma consulta com 46 atividades no Moodle falso local fez 59 requisições em 0,7 s, com 0,38 s de CPU e +2,6 MB de memória, sem processo filho. Na consulta de verdade há uma pausa de 0,15 s entre requisições, para não pesar no servidor. Só o login abre navegador: o Edge e o Playwright somaram 9 processos e cerca de 500 MB por poucos segundos, e nada fica aberto depois.
+
 ## 📁 Estrutura
 
 ```
 main.py              # app: início, menu, bandeja, tela cheia, fechar animado
 ceci/                # engine, janela, rotina, sprites, configurações, UI
+ceci/sala/           # Sala Virtual: login, leitura do Moodle, SQLite, lembretes, janelas
 assets/              # sprites recortados, frames.json, animations.json, falas.json, ícone
 assetsoriginal/      # spritesheets originais (fundo magenta)
 tools/               # pipeline de sprites, manifesto e build do .exe
@@ -182,7 +227,7 @@ PROJECT_STATE.md     # o que está feito, testado e pendente
 
 ## 🗺️ Estado do projeto
 
-Esta é a **Fase 1**: a mascote animada e interativa. Ela não usa IA, não lê arquivos, não acessa a internet e não executa comandos. O que está feito, o que foi testado e o que ainda falta verificar estão em [PROJECT_STATE.md](PROJECT_STATE.md).
+**Fase 1**: a mascote animada e interativa. **Fase 2**: os prazos da Sala Virtual. Ela não usa IA, não lê seus arquivos e não executa comandos; a única conexão é com a Sala Virtual, e só se você conectar. O que está feito, o que foi testado e o que ainda falta verificar estão em [PROJECT_STATE.md](PROJECT_STATE.md).
 
 ## 📄 Licença
 

@@ -17,6 +17,7 @@ from PySide6.QtGui import QColor, QImage, QPainter  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 import main as M  # noqa: E402
+M.fullscreen_app_active = lambda: False  # tela cheia de verdade no PC (vídeo, jogo) não entra no teste
 
 qa = QApplication(sys.argv)
 fails = []
@@ -117,7 +118,7 @@ def run_exit():
     app.quit_animated()
 
     def done():
-        check("saída: corrida → meio fora → livro → mão (perna uma vez só)", order == [0, 1, 2, 4, 3, 5, 6, 7])
+        check("saída: corrida -> meio fora -> livro -> mão (perna uma vez só)", order == [0, 1, 2, 4, 3, 5, 6, 7])
         check("saída: app fechou no fim", closed == [True])
         strip(shots, os.path.join(ROOT, "_preview", "saida_strip.png"))
         qa.exit(1 if fails else 0)

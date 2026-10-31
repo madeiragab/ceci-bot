@@ -15,6 +15,7 @@ from PySide6.QtCore import QPointF, QTimer  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 import main as M  # noqa: E402
+M.fullscreen_app_active = lambda: False  # tela cheia de verdade no PC (vídeo, jogo) não entra no teste
 
 qa = QApplication(sys.argv)
 fails = []

@@ -15,7 +15,7 @@ BOOLS = [("walk", "Permitir movimentação automática"), ("follow_mouse", "Acom
 
 
 class SettingsDialog(QDialog):
-    def __init__(self, settings, on_apply, parent=None):
+    def __init__(self, settings, on_apply, parent=None, sala=None):
         super().__init__(parent)
         self.setWindowTitle("Ceci — Configurações")
         self.s, self.on_apply = settings, on_apply
@@ -41,6 +41,10 @@ class SettingsDialog(QDialog):
             c = QCheckBox(t, checked=settings[k])
             self.checks[k] = c
             f.addRow(c)
+        if sala:  # (texto do botão, abrir) — Fase 2
+            b = QPushButton(sala[0])
+            b.clicked.connect(sala[1])
+            f.addRow("Sala Virtual", b)
         bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Apply | QDialogButtonBox.Cancel)
         bb.accepted.connect(lambda: (self.apply(), self.accept()))
         bb.rejected.connect(self.reject)

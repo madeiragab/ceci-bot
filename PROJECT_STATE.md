@@ -1,4 +1,4 @@
-# Ceci Bot — Estado do projeto (Fase 1)
+# Ceci Bot — Estado do projeto (Fases 1 e 2)
 
 ## Implementado
 - Análise das 55 spritesheets: `tools/NOTES_sheets.md`.
@@ -99,6 +99,81 @@
   fora do lugar. Vi duas Cecis abertas ao mesmo tempo (o .exe e uma de teste), uma por cima da outra, o
   que parece animação quebrada. Agora só abre uma (mutex nomeado `CeciBot.SingleInstance`); abrir de
   novo não faz nada. Se o problema voltar com uma Ceci só, ainda falta descobrir a causa.
+
+- Clique x carinho x arraste (31/10): o carinho somava as voltas do mouse nos dois eixos, então o caminho
+  torto da mira até a cabeça já virava carinho (simulado: 5 reversões com o algoritmo antigo). Agora conta
+  por eixo (5 idas e vindas ≥ 30 px no mesmo eixo) e espera 450 ms: clicou nesse meio-tempo, vale o clique.
+  Arraste só começa com um puxão (> 22 px) ou segurando 0,25 s e mexendo > 6 px; antes 6 px bastavam e um
+  clique tremido (ou toque no touchpad) levantava a Ceci.
+
+## Fase 2 — Sala Virtual (31/10)
+
+### Inspeção (feita de verdade, sem login)
+- `tool_mobile_get_public_config` (público) da Sala Virtual 2: Moodle 4.x (tema academi), `enablewebservices: 0`
+  e `enablemobilewebservice: 0` → não existe API/token para aluno. Login por CPF + senha no formulário padrão,
+  sem SSO. `M.cfg.sessiontimeout = 28800` → a sessão do Moodle expira com 8 h sem uso.
+- Por isso: login na página oficial numa janela do Edge (Playwright, canal `msedge`, sem baixar navegador) e,
+  depois, leitura pelas mesmas chamadas AJAX que o Painel usa (`lib/ajax/service.php`, com a sessão do
+  usuário) + as páginas das atividades, via `urllib`. Nenhum navegador durante as consultas.
+
+### Implementado (`ceci/sala/`)
+- `login.py`: abre `/login/index.php`, espera o Painel logado (M.cfg.sesskey e sem `notloggedin`), copia só os
+  cookies do domínio e fecha o navegador sempre (finally). Fechar a janela/cancelar/10 min = erro claro.
+- `protect.py`: sessão (cookies, user agent, link do calendário exportado) cifrada com DPAPI
+  (CryptProtectData, só o usuário do Windows neste PC). Nunca guarda senha.
+- `moodle.py`: cliente HTTP com cookie jar; detecta sessão expirada (redirecionou para o login ou
+  `servicerequireslogin`/`invalidsesskey`), sem internet (DNS), servidor fora (5xx/timeout/recusa).
+  Leitores: M.cfg, datas do cabeçalho `activity-dates` e da tabela de status (português e inglês),
+  status de envio (`submissionstatus*` ou texto), tentativas do questionário, página de erro (`errorbox`/404),
+  calendário exportado (iCal) e o formulário "Obter URL do calendário".
+- `collect.py`: disciplinas (`allincludinghidden`, as passadas só registradas), Linha do tempo (60 dias para
+  trás, paginada), calendário mensal (mês passado + 6 à frente, eventos de módulo e de disciplina/usuário),
+  conteúdo de cada disciplina (`core_courseformat_get_state`, plano B: links da página da disciplina) e
+  página de cada tarefa/questionário (status de envio). Chave estável `cm:<id do módulo>` (eventos sem módulo:
+  `ev:<id>`). Sumiu? Abre a página antes de marcar indisponível. Recursos (arquivo, link, página) ficam de fora;
+  fórum/outros só com prazo ou conclusão acompanhada.
+- `store.py` (SQLite `%APPDATA%\Ceci Bot\sala_virtual.db`): courses, activities, events (id do evento → atividade),
+  changes (histórico), syncs, notifications (UNIQUE chave+tipo+prazo), prefs. Mudanças: nova (não na primeira
+  sincronização), prazo (antes/depois, inclusive prazo definido/removido), entregue, reaberta, indisponível,
+  voltou, atrasada. Nada é apagado. Na dúvida, mantém o prazo conhecido (só tira um prazo se o calendário
+  foi lido por inteiro naquele período e a página também não mostra). Atividade que veio só do calendário
+  é "adotada" pelo id do módulo depois, sem virar "nova" de novo.
+- Status: pendente, entrega confirmada pelo Moodle, concluída (critério do Moodle; para tarefa/questionário
+  só vale o envio), atrasada, sem prazo, desconhecido, marcada por você (não conta como entrega), indisponível,
+  evento. Rascunho nunca é entrega.
+- `reminders.py`: 7 d, 3 d, 24 h, 2 h, no dia (no horário da consulta) e atraso (só nos 3 primeiros dias).
+  Só o aviso mais recente que já chegou é dado; os que ficaram para trás são marcados como pulados.
+- `service.py`: uma tentativa automática por dia (registrada ao começar, falhou = não repete), consulta
+  pendente ao abrir o app (20 s depois de ela entrar), manual não gasta a automática, um único timer local
+  até o próximo lembrete/horário (máx. 3 h, sem rede). Sessão expirada + calendário exportado: confere só os
+  prazos e marca como parcial. Horário silencioso e tela cheia seguram os avisos (importantes: configurável).
+  Log sem sesskey/cookie/token.
+- `ui.py`/`texts.py`: Conectar Sala Virtual (endereço, entrar, conferir, desconectar e apagar, horário,
+  lembretes, silêncio), Minhas atividades, Resumo da faculdade, cartão de aviso com "Abrir no Moodle".
+  Tema preto/vermelho. Falas novas `sv_*` com o texto do usuário (separadas pelo resultado real).
+- App: animações Conferindo Sala Virtual → Atualizando dados → Sucesso/Erro/Confusa; Mostrando tarefa (nova),
+  Mostrando lembrete (7/3 dias), Prazo urgente (24 h/dia/2 h/atraso), Resumo do dia (vários avisos ou primeira
+  sincronização), Feliz (entrega confirmada). Pausada, oculta ou em tela cheia: não anima nem fala.
+- .exe: `--collect-all playwright --collect-data tzdata`; pasta foi para ~248 MB (o driver do Playwright tem 107 MB).
+
+### Testado de verdade (Fase 2)
+- `tests/sala_test.py` (50 checagens) contra um Moodle falso local (`tests/fake_moodle.py`, dados fictícios):
+  os 18 cenários obrigatórios (primeira sincronização, nova, prazo alterado, vencida, entregue, rascunho, sem
+  data, removida, disciplina vazia, sem internet e servidor fora, sessão expirada (com e sem calendário
+  exportado), parcial, duplicatas, aviso repetido, 1 automática por dia + consulta pendente ao abrir, manual,
+  lembretes offline sem tocar no servidor, navegador encerrado depois do login com Edge de verdade em modo
+  headless) + DPAPI, horário silencioso, logs sem segredos e janelas abrindo.
+- `tests/sala_app_test.py` (9): ordem das animações, falas só do resultado real, cartão, pausada não reage.
+- Visual das janelas conferido (render real, fora da tela) em `_preview/fase2_*.png`.
+- Medido: .exe parado 0,09 % de CPU, 68 MB working set, 33 MB privado, 0 filhos, 0 TCP. Consulta (Moodle falso,
+  46 atividades): 59 requisições, 0,7 s, 0,38 s de CPU, +2,6 MB, 0 processos filhos. Login: pico de 9 processos
+  (Edge + driver) e ~500 MB por ~3 s; 0 processos depois.
+
+### Não verificado ainda (Fase 2)
+- **Nada foi lido da Sala Virtual de verdade**: precisa do login do usuário. Não verificados: o HTML real das
+  páginas de tarefa/questionário no tema academi (os leitores seguem os templates do Moodle 4), se a
+  instituição deixa o calendário exportado ligado, e o tempo real de uma consulta.
+- Login pelo .exe (driver do Playwright dentro do pacote) e clique na notificação do Windows.
 
 ## Testado de verdade
 - `tests/speech_test.py` (24 checagens): escreve letra a letra, balão acima da cabeça e dentro da

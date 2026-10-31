@@ -1,5 +1,5 @@
 {
- "_sobre": "Ceci Bot — banco de falas v1.0. Cada categoria é sorteada sem repetir até esgotar. Só reações visuais e brincadeiras: nada aqui afirma que código, testes ou tarefas foram concluídos de verdade. As categorias 'girando' (girada/sacudida no ar) e 'tonta' (pouso depois do giro) foram escritas depois, fora do banco v1.0, e podem ser editadas à vontade.",
+ "_sobre": "Ceci Bot — banco de falas v1.0. Cada categoria é sorteada sem repetir até esgotar. Só reações visuais e brincadeiras: nada aqui afirma que código, testes ou tarefas foram concluídos de verdade. As categorias 'girando' (girada/sacudida no ar) e 'tonta' (pouso depois do giro) foram escritas depois, fora do banco v1.0, e podem ser editadas à vontade. Fase 2 (Sala Virtual): as categorias 'sv_*' usam o texto do usuário sem alteração; as listas de prazo urgente e de falha foram separadas pelo que aconteceu de verdade (vence hoje, ainda dá tempo, atrasada; login, rede, consulta parcial, erro), para a fala sempre bater com o resultado real.",
  "inicio": [
   "Oieeee! Cheguei! Sentiu saudade? KKKKK",
   "Licença, licença! Sua especialista favorita chegou.",
@@ -323,5 +323,52 @@
   "Respeita minha reputação, seu palhaço!",
   "Eu sou muito perigosa, tá? Não ri!",
   "Sou pequena, mas o deboche é tamanho família."
+ ],
+ "sv_nova": [
+  "Opa! Temos atividade nova!",
+  "Adivinha quem ganhou mais trabalho? KKKKK",
+  "Olha só, o professor postou coisa nova.",
+  "Ei, vem cá. Acho melhor você ver isso."
+ ],
+ "sv_prazo": [
+  "Ei! Essa atividade tá chegando no prazo!",
+  "Não deixa isso pra última hora, criatura!",
+  "Pssiu! Olha a data dessa entrega!",
+  "Eu tô avisando, hein. Depois não fala que esqueceu!"
+ ],
+ "sv_hoje": [
+  "CARALHO, ISSO VENCE HOJE!"
+ ],
+ "sv_urgente": [
+  "EI! ESSA ATIVIDADE NÃO VAI SE ENTREGAR SOZINHA!",
+  "Puta merda, corre que ainda dá tempo!",
+  "Larga a procrastinação um pouquinho, vai! KKKKK"
+ ],
+ "sv_atrasada": [
+  "EI! ESSA ATIVIDADE NÃO VAI SE ENTREGAR SOZINHA!",
+  "Larga a procrastinação um pouquinho, vai! KKKKK"
+ ],
+ "sv_entregue": [
+  "BOAAAA! Menos uma!",
+  "Aeeee! Essa já foi!",
+  "Prontinho! Entrega confirmada!",
+  "Viu só? Agora dá pra respirar."
+ ],
+ "sv_ok": [
+  "Conferi tudo que consegui acessar!",
+  "Prontinho! Sua lista tá atualizada.",
+  "Deixa comigo que eu organizo esses prazos."
+ ],
+ "sv_falha_login": [
+  "Hmmm... não consegui entrar na Sala Virtual."
+ ],
+ "sv_falha": [
+  "Deu ruim na consulta. Melhor conferir depois."
+ ],
+ "sv_parcial": [
+  "Ei, os dados podem estar desatualizados, tá?"
+ ],
+ "sv_sem_internet": [
+  "A internet resolveu me odiar hoje, aparentemente."
  ]
 }

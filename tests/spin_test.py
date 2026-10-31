@@ -15,6 +15,7 @@ from PySide6.QtCore import QPointF, QTimer  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 import main as M  # noqa: E402
+M.fullscreen_app_active = lambda: False  # tela cheia de verdade no PC (vídeo, jogo) não entra no teste
 
 qa = QApplication(sys.argv)
 fails = []
@@ -80,7 +81,7 @@ def spin_done():
 
 def landed():
     check("depois do giro o pouso é tonta", "tonta" in said and "solta" not in said)
-    check("ordem: arraste → giro → tonta", [c for c in said if c in ("arrastada", "girando", "tonta")]
+    check("ordem: arraste -> giro -> tonta", [c for c in said if c in ("arrastada", "girando", "tonta")]
           == ["arrastada", "girando", "tonta"])
     w._start_drag()  # sacudir de um lado para o outro também deixa tonta
     feed([(cx + (80 if (k // 3) % 2 else -80) + k, cy) for k in range(36)], shaken)

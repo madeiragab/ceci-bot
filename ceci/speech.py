@@ -278,6 +278,7 @@ class Speech(QObject):
         self.bags, self.last_text = {}, {}
         self.bubble = Bubble(settings)
         self.pending = None
+        self.muted = None  # animação que não deve puxar a fala automática dela (ex.: avisos da Sala Virtual)
         self.queue = []  # (categoria, prioridade, frase) esperando o balão liberar
         self.rel = None  # topo da cabeça em relação aos pés (com folga p/ não pular a cada quadro)
         self.last_auto = -1e9
@@ -303,25 +304,29 @@ class Speech(QObject):
         self.last_text[cat] = bag.pop()
         return self.last_text[cat]
 
-    def say(self, cat, prio=1, force=False):
-        """Fala agora ou, com o balão ocupado, entra na fila (só interações; automática é descartada)."""
+    def say(self, cat, prio=1, force=False, text=None):
+        """Fala agora ou, com o balão ocupado, entra na fila (só interações; automática é descartada).
+
+        `text` = frase pronta (ex.: nome e prazo de uma atividade) em vez de sortear da categoria."""
         w, b = self.win, self.bubble
         if not self.s["speech"] or not w.isVisible() or w.player.paused:
             return False
         if b.active():
-            if not force or cat in [q[0] for q in self.queue] or (cat == b.cat and b.typing()):
+            dup = (text in [q[2] for q in self.queue] if text
+                   else cat in [q[0] for q in self.queue] or (cat == b.cat and b.typing()))
+            if not force or dup:
                 return False
             if prio >= 5:  # tchau: passa na frente do que estava esperando (sem cortar a frase atual)
                 self.queue = []
             elif len(self.queue) >= QUEUE_MAX:
                 return False
-            text = self.pick(cat)
+            text = text or self.pick(cat)
             if not text:
                 return False
             self.queue.append((cat, prio, text))
             b.hurry()
             return True
-        text = self.pick(cat)
+        text = text or self.pick(cat)
         if not text:
             return False
         if not force:
@@ -356,7 +361,8 @@ class Speech(QObject):
             forced = self.win.talk_aid == p.aid
             self.win.talk_aid = None
             self.pending = None
-            r = REACT.get(p.aid)
+            r = REACT.get(p.aid) if self.muted != p.aid else None  # quem pediu a animação já fala por ela
+            self.muted = None
             if r and (forced or self._auto_ok(r[1])):
                 a = p.current
                 at = (a["loop"][0] if a.get("loop") else 0) if r[2] == "core" else r[2]

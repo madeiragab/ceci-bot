@@ -8,6 +8,7 @@ Get-Process -Name 'Ceci Bot' -ErrorAction SilentlyContinue | Stop-Process -Force
 python -m PyInstaller --noconfirm --clean --windowed --name 'Ceci Bot' --icon "$proj\assets\icon\ceci.ico" `
     --add-data "$proj\assets\sprites;assets\sprites" --add-data "$proj\assets\frames.json;assets" `
     --add-data "$proj\assets\animations.json;assets" --add-data "$proj\assets\falas.json;assets" --add-data "$proj\assets\icon;assets\icon" `
+    --collect-all playwright --collect-data tzdata `
     --exclude-module numpy --exclude-module scipy --exclude-module PIL --exclude-module tkinter `
     --distpath $dist --workpath "$work\build" --specpath $work "$proj\main.py"
 Remove-Item -Recurse -Force $work

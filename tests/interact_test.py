@@ -17,6 +17,7 @@ from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 import main as M  # noqa: E402
+M.fullscreen_app_active = lambda: False  # tela cheia de verdade no PC (vídeo, jogo) não entra no teste
 from ceci.window import CANVAS_H, INTERACT, PET_CONFIRM, PET_PASSES  # noqa: E402
 
 qa = QApplication(sys.argv)

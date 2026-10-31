@@ -19,6 +19,12 @@ def build_menu(app, tray=False):
         size = m.addMenu("Alterar tamanho")
         for t, v in (("Mínima", 0.25), ("Pequena", 0.4), ("Média", 0.55), ("Grande", 0.75), ("Enorme", 1.0)):
             size.addAction(t, lambda v=v: app.set_size(v))
+    if getattr(app, "sala", None):
+        m.addSeparator()
+        m.addAction("Minhas atividades", app.open_activities)
+        m.addAction("Resumo da faculdade", app.open_summary)
+        m.addAction("Conferir Sala Virtual agora", app.check_sala)
+        m.addSeparator()
     pause = QAction("Pausar animações", m, checkable=True, checked=app.win.player.paused)
     pause.toggled.connect(app.set_paused)
     m.addAction(pause)
