@@ -99,11 +99,13 @@ check("pausada: consulta acontece, mas a Ceci não anima nem fala", not played a
       and "cm:521" in {r["key"] for r in app.sala.store.rows()})
 app.set_paused(False)
 
-app.speech.bubble.stop()
-app.speech.queue = []
+app.speech.say("idle", 3, force=True)
+app.speech.say("curiosa", 3, force=True)
 said.clear()
 app.command("o que vence essa semana?")
 check("caixinha: pergunta da semana = ela fala as atividades", any(t and "vencendo" in t for _, t in said))
+check("caixinha tem prioridade: corta o que ela falava e responde na hora",
+      "vencendo" in app.speech.bubble.text and "curiosa" not in [q[0] for q in app.speech.queue])
 app.speech.bubble.stop()
 app.speech.queue = []
 said.clear()

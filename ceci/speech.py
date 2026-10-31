@@ -332,6 +332,11 @@ class Speech(QObject):
         self._show(cat, prio, text)
         return True
 
+    def cut(self):
+        """Pergunta da caixinha: a resposta passa na frente de tudo (corta a frase atual e a fila)."""
+        self.queue = []
+        self.bubble.stop()
+
     def say_many(self, lines, cat="sv_info"):
         """Várias frases prontas em sequência (a lista de atividades), sem o limite da fila das interações."""
         lines = [t for t in lines if t]

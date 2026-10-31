@@ -161,6 +161,7 @@ class App:
 
     def command(self, text):
         action, rest = parse(text)
+        self.speech.cut()  # o que você digitou tem prioridade sobre o que ela estava falando
         now = self.sala.now()
         if action in ("atividades", "prazo", "hoje", "amanha", "semana", "atrasadas"):
             self.tell(action, "prazo" if action == "atrasadas" else "tarefa")
