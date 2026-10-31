@@ -20,6 +20,8 @@ FADE_MS = 420  # troca de animação: desenhos diferentes precisam de um dissolv
 class CeciWindow(QWidget):
     context_menu = Signal(QPoint)
     became_idle = Signal()
+    moved = Signal()
+    interaction = Signal(str)  # clique, carinho, arrastada, solta, acordando, olhando (falas)
 
     def __init__(self, settings):
         super().__init__(None)
@@ -61,6 +63,7 @@ class CeciWindow(QWidget):
         self.eyes_last_near = 0.0
         self.eye_timer = QTimer(self, timeout=self._eye_tick)
         self.exiting = False
+        self.talk_aid = None        # animação pedida pelo usuário: a fala dela não depende de sorteio
         self.breath_timer = QTimer(self, timeout=self.update)  # respiração sutil (nunca fica "congelada")
         self._resize_canvas()
 
@@ -147,6 +150,7 @@ class CeciWindow(QWidget):
     def _place(self):
         p = self.foot - self.anchor
         self.move(int(round(p.x())), int(round(p.y())))
+        self.moved.emit()
 
     # ---------- desenho ----------
     def _frame(self, st):
@@ -238,6 +242,8 @@ class CeciWindow(QWidget):
         if self.exiting and aid != "saida":
             return False
         self.eyes_off()
+        if kw.pop("talk", False):
+            self.talk_aid = aid
         return self.player.play(aid, mirror=kw.pop("mirror", False), **kw)
 
     def is_idle(self):
@@ -373,6 +379,8 @@ class CeciWindow(QWidget):
                 was = self.eyes_on
                 self.eyes_on, self.eyes_idx = True, idx
                 self._on_frame([idx[0], idx[1], 400], not was)
+                if not was:
+                    self.interaction.emit("olhando")
         elif self.eyes_on and now - self.eyes_last_near > 1.2:
             self.eyes_off(back=True)
 
@@ -440,6 +448,7 @@ class CeciWindow(QWidget):
             self.pet()
         elif where:
             self.stop_walk()
+            self.interaction.emit("clique")
             self.play(random.choice(["acenando", "curiosa", "ajeitando", "acenando"]), force=True)
 
     def pet(self):
@@ -448,16 +457,19 @@ class CeciWindow(QWidget):
             return
         self.last_pet = now
         self.stop_walk()
+        self.interaction.emit("carinho")
         self.play("carinho", force=True)
 
     def wake(self):
         if self.player.aid in ("cochilo", "dormindo"):
+            self.interaction.emit("acordando")
             self.player.exit_core()  # acorda e levanta com os quadros do próprio sheet (sem pular de pose)
 
     def _start_drag(self):
         self.dragging, self.lifted = True, False
         self.walk_target, self.vel, self.fall_v = None, 0.0, None
         self.prev = None
+        self.interaction.emit("arrastada")
         self.play("arrastada", force=True, cut=True)
         self.grabMouse()
 
@@ -500,6 +512,7 @@ class CeciWindow(QWidget):
         self.save_pos()
         a = self.player.current
         if self.player.aid == "arrastada" and a:
+            self.interaction.emit("solta")
             self.player.jump(len(a["seq"]) - 1 if soft else a.get("land", len(a["seq"]) - 1))
 
     # ---------- visibilidade ----------

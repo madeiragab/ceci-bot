@@ -5,8 +5,10 @@ Uso: python tests/quit_test.py
 """
 import os
 import sys
+import tempfile
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ["CECI_CONFIG_DIR"] = tempfile.mkdtemp(prefix="cecibot_test_")  # nunca as do usuário
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from PySide6.QtCore import QPointF, QTimer  # noqa: E402

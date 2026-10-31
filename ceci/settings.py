@@ -4,8 +4,9 @@ import sys
 
 FROZEN = getattr(sys, "frozen", False)  # rodando como .exe (PyInstaller)
 ROOT = getattr(sys, "_MEIPASS", "") if FROZEN else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# no .exe as configurações vão para %APPDATA% (a pasta do programa não é lugar de gravar dados)
-CONFIG_DIR = os.path.join(os.environ.get("APPDATA", ROOT), "Ceci Bot") if FROZEN else os.path.join(ROOT, "config")
+# .exe e código usam o mesmo arquivo em %APPDATA%: tamanho e opções mudados valem até mudar de novo,
+# seja qual for a versão aberta. Os testes apontam CECI_CONFIG_DIR para uma pasta temporária.
+CONFIG_DIR = os.environ.get("CECI_CONFIG_DIR") or os.path.join(os.environ.get("APPDATA", ROOT), "Ceci Bot")
 PATH = os.path.join(CONFIG_DIR, "settings.json")
 
 DEFAULTS = {
@@ -23,6 +24,8 @@ DEFAULTS = {
     "eco": False,
     "breathe": True,
     "door_entrance": False,  # abrir já no idle novo; entrada pela porta é opcional
+    "speech": True,          # falas no balão (letra a letra)
+    "speech_freq": 1.0,      # frequência das falas automáticas
     "start_pos": "bottom_right",  # bottom_right | bottom_left | saved
     "pos": None,             # [x, y] do ponto dos pés (lógico)
 }

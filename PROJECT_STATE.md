@@ -40,8 +40,11 @@
 
 - Executável: `tools/build_exe.ps1` (PyInstaller 6.22, modo pasta, ícone `assets/icon/ceci.ico`) →
   `%LOCALAPPDATA%\Programs\Ceci Bot\Ceci Bot.exe` (138 MB, quase tudo Qt) + atalho "Ceci Bot" na área de
-  trabalho. No .exe as configurações ficam em `%APPDATA%\Ceci Bot\settings.json` (copiadas do
-  `config/` do projeto na primeira instalação) e "Iniciar com o Windows" registra o próprio .exe.
+  trabalho. "Iniciar com o Windows" registra o próprio .exe.
+- Configurações: .exe e código usam o MESMO arquivo, `%APPDATA%\Ceci Bot\settings.json` (antes o código
+  usava `config/` do projeto, e abrir a versão de código parecia "esquecer" o tamanho escolhido no .exe).
+  Tamanho mudado no diálogo ou no menu fica salvo até mudar de novo. Os testes usam uma pasta
+  temporária (`CECI_CONFIG_DIR`) e nunca gravam nas configurações do usuário.
   Mudou sprite/manifesto/código → rodar o script de novo.
 
 - Fechar: anda (caminhada) até o canto MAIS PERTO, corre e sai cortada pela borda da tela; espelhada
@@ -55,7 +58,31 @@
 - Publicado: https://github.com/madeiragab/ceci-bot (público), release v0.1.0 com `CeciBot-windows.zip`.
   Sem licença definida (todos os direitos reservados).
 
+- Falas (`ceci/speech.py`, banco `assets/falas.json` v1.0: 242 frases em 29 categorias, texto do
+  usuário sem alteração). Balão próprio (janela transparente aos cliques) em cima da cabeça, com
+  rabicho; lá no alto (arrastada) vai para o lado da cabeça. Escreve letra a letra (38 ms por letra,
+  pausa em pontuação), pisca ▼ no fim e some sozinho. Sentada/agachada o balão desce junto.
+  - Interações sempre falam: clique, carinho, arraste, pouso, acordar, abrir, voltar a aparecer,
+    menu "Interagir" e "Falar algo", painel de animações. Fechar: diz o tchau andando até o canto e só
+    corre depois de terminar a frase; o balão some quando ela corre.
+  - Cada animação tem sua categoria (`REACT`) e fala no começo do miolo (livro aberto, caneca na boca);
+    automáticas só com chance × "Frequência das falas" e 18 s entre elas. Parada, solta um comentário a
+    cada 45–110 s (8 % easter egg; "esperando" depois de 3 min sem interação; "Zzz" dormindo).
+  - Nunca corta uma fala com outra: com o balão ocupado, interação entra numa fila (até 3, sem repetir
+    categoria) e é dita em sequência, com pausa de leitura curta; fala automática é descartada.
+  - Cada categoria é sorteada sem repetir até esgotar. Liga/desliga e frequência nas configurações.
+
 ## Testado de verdade
+- `tests/speech_test.py` (24 checagens): escreve letra a letra, balão acima da cabeça e dentro da
+  tela, rabicho na direção dela; clique e arraste no meio de uma frase entram na fila e saem na ordem
+  (início → clique → arraste → pouso) sem cortar nenhuma; ao lado da cabeça quando arrastada lá no
+  alto; sem repetição; intervalo das automáticas; desligar; some sozinho; tchau antes de correr.
+- `tests/settings_test.py`: tamanho pelo diálogo e pelo menu continua ao abrir de novo.
+- Falas na tela real (31/10): frase de início escrevendo, clique e carinho durante uma frase saem
+  depois dela, arraste com o mouse real (pendurada → queda → "Meus óculos quase foram pro caralho!").
+- Medição 31/10 com falas (bateria, 8 núcleos): .exe 60 s com rotina automática: CPU 0,47 % do total,
+  working set 61 MB (máx. 65), privado 28 MB, 0 TCP. Isolando o balão (código, rotina parada): 0,35 %
+  em silêncio × 0,45 % falando sem parar. Sem fala, o balão não tem timer nenhum.
 - `tests/quit_test.py`: do meio da tela anda até o canto, sai pelo lado certo (espelhada à esquerda),
   quadros 4/6/7 colados na borda (±1,5 px) e o app só fecha no fim — dos dois lados.
 - .exe aberto e medido por 30 s (31/10): rodando, CPU 0,20 % do total, 53 MB working set, 25 MB privado,

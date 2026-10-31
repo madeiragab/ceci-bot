@@ -11,7 +11,7 @@ BOOLS = [("walk", "Permitir movimentação automática"), ("follow_mouse", "Acom
          ("always_on_top", "Sempre visível (acima das janelas)"), ("autostart", "Inicializar com o Windows"),
          ("pause_fullscreen", "Pausar durante jogos/apps em tela cheia"), ("eco", "Modo econômico"),
          ("breathe", "Respiração sutil quando parada"),
-         ("door_entrance", "Entrar pela porta ao abrir")]
+         ("door_entrance", "Entrar pela porta ao abrir"), ("speech", "Falas no balão")]
 
 
 class SettingsDialog(QDialog):
@@ -24,6 +24,7 @@ class SettingsDialog(QDialog):
         self.speed = QDoubleSpinBox(minimum=0.25, maximum=3.0, singleStep=0.1, value=settings["speed"])
         self.fps = QSpinBox(minimum=10, maximum=60, value=settings["fps"])
         self.freq = QDoubleSpinBox(minimum=0.2, maximum=3.0, singleStep=0.1, value=settings["random_freq"])
+        self.talk = QDoubleSpinBox(minimum=0.2, maximum=3.0, singleStep=0.1, value=settings["speech_freq"])
         self.pos = QComboBox()
         for k, t in (("bottom_right", "Canto inferior direito"), ("bottom_left", "Canto inferior esquerdo"),
                      ("saved", "Última posição")):
@@ -33,6 +34,7 @@ class SettingsDialog(QDialog):
         f.addRow("Velocidade das animações", self.speed)
         f.addRow("FPS (movimento/transições)", self.fps)
         f.addRow("Frequência das animações aleatórias", self.freq)
+        f.addRow("Frequência das falas", self.talk)
         f.addRow("Posição inicial", self.pos)
         self.checks = {}
         for k, t in BOOLS:
@@ -49,7 +51,7 @@ class SettingsDialog(QDialog):
         s = self.s
         auto_changed = s["autostart"] != self.checks["autostart"].isChecked()
         s.update(size=round(self.size.value(), 2), speed=self.speed.value(), fps=self.fps.value(),
-                 random_freq=self.freq.value(), start_pos=self.pos.currentData(),
+                 random_freq=self.freq.value(), speech_freq=self.talk.value(), start_pos=self.pos.currentData(),
                  **{k: c.isChecked() for k, c in self.checks.items()})
         if auto_changed:
             set_autostart(s["autostart"])
@@ -121,7 +123,7 @@ class AnimPanel(QDialog):
                 w.walk_to(w.foot.x() + (250 if w.foot.x() < a.center().x() else -250) * w.sprites.scale / 0.55)
             else:
                 w = self.win
-                w.play(aid, force=True)
+                w.play(aid, force=True, talk=True)
 
     def pause(self):
         self.p.set_paused(not self.p.paused)

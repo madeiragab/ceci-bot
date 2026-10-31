@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QApplication
 
 from ceci.behavior import Behavior
 from ceci.settings import ROOT, Settings
+from ceci.speech import Speech
 from ceci.tray import Tray, build_menu
 from ceci.ui import AnimPanel, SettingsDialog
 from ceci.window import CeciWindow
@@ -49,6 +50,7 @@ class App:
         self.s = Settings()
         self.win = CeciWindow(self.s)
         self.beh = Behavior(self.win, self.s)
+        self.speech = Speech(self.win, self.s)
         self.win.context_menu.connect(self._menu)
         self.tray = Tray(self, ICON)
         self.panel = self.dlg = None
@@ -60,10 +62,12 @@ class App:
         self.win.set_start_pos()
         self.win.show()
         if self.s["door_entrance"]:
-            self.win.play("entrada", force=True)  # não aparece parada antes da entrada
+            self.win.play("entrada", force=True, talk=True)  # não aparece parada antes da entrada
         else:
             self.win.play("idle", force=True)  # abre direto no idle novo (folha idle.png)
             self.beh.schedule()
+            QTimer.singleShot(700, lambda: self.speech.say("inicio", 3, force=True))
+        self.speech.restart_chat()
         self.win.update_eye_timer()
         self.win.update_breath()
 
@@ -76,7 +80,11 @@ class App:
     def interact(self):
         self.beh.user_activity()
         self.win.stop_walk()
-        self.win.play(random.choice(["acenando", "feliz", "beijinho", "coracao", "fofa"]), force=True)
+        self.win.play(random.choice(["acenando", "feliz", "beijinho", "coracao", "fofa"]), force=True, talk=True)
+
+    def chat(self):
+        self.beh.user_activity()
+        self.speech.say(random.choice(["idle", "curiosa", "conversando", "raras"]), 3, force=True)
 
     def stroll(self):
         """Caminha até um ponto aleatório da tela (sentido oposto se estiver perto da borda)."""
@@ -99,6 +107,7 @@ class App:
 
     def _apply(self):
         self.win.apply_settings()
+        self.speech.apply_settings()
         self._update_fs_timer()
 
     def set_size(self, v):
@@ -112,9 +121,11 @@ class App:
         self.win.update_eye_timer()
         self.win.update_breath()
         self.beh.stop() if on else self.beh.schedule()
+        self.speech.hide() if on else self.speech.restart_chat()
 
     def hide_ceci(self):
         self.beh.stop()
+        self.speech.hide()
         self.win.suspend(True)
         self.win.hide()
         self.win.update_eye_timer()
@@ -124,6 +135,7 @@ class App:
         self.win.suspend(False)
         self.win.update_eye_timer()
         self.win.play("acenando", force=True)
+        QTimer.singleShot(400, lambda: self.speech.say("inicio", 3, force=True))
 
     def _update_fs_timer(self):
         self.fs_timer.start(3000) if self.s["pause_fullscreen"] else self.fs_timer.stop()
@@ -154,13 +166,19 @@ class App:
         # ponto de largada: a corrida (quadros 0-2) termina com ela saindo pela borda
         target = a.left() + 250 * s if left else a.right() + 1 - 250 * s
 
+        self.speech.say("saida", 5, force=True)
+
         def go():
             w.exiting = True
+            self.speech.hide()  # o balão some quando ela sai correndo
             w.play("saida", force=True, mirror=left, on_done=self.qapp.quit)
+
+        def ready():  # só corre depois de terminar de falar o tchau
+            QTimer.singleShot(self.speech.remaining_ms(), go)
         if abs(w.foot.x() - target) > 20:
-            w.walk_to(target, on_done=go, fast=True)  # sempre andando até o canto
+            w.walk_to(target, on_done=ready, fast=True)  # sempre andando até o canto
         else:
-            go()
+            ready()
 
 
 def main():

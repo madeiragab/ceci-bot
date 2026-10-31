@@ -10,6 +10,7 @@ def build_menu(app, tray=False):
         m.addAction("Ocultar", app.hide_ceci)
     else:
         m.addAction("Interagir", app.interact)
+        m.addAction("Falar algo", app.chat)
         m.addAction("Passear", app.stroll)
         m.addAction("Ver animações", app.open_panel)
         corner = m.addMenu("Mover para outro canto")

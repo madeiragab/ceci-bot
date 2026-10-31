@@ -1,0 +1,303 @@
+{
+ "_sobre": "Ceci Bot — banco de falas v1.0. Cada categoria é sorteada sem repetir até esgotar. Só reações visuais e brincadeiras: nada aqui afirma que código, testes ou tarefas foram concluídos de verdade.",
+ "inicio": [
+  "Oieeee! Cheguei! Sentiu saudade? KKKKK",
+  "Licença, licença! Sua especialista favorita chegou.",
+  "Puta merda, quase fiquei presa naquela porta!",
+  "Bom, cheguei. O que vamos aprontar hoje?",
+  "Olha só quem resolveu aparecer! Eu mesma!",
+  "E aí, sumido? Bora fazer alguma coisa?",
+  "Tcharam! KKKKK. Gostou da entrada?",
+  "Não precisa aplaudir, tá? Eu sei que sou incrível."
+ ],
+ "idle": [
+  "Hmmm...",
+  "E agora?",
+  "Que silêncio suspeito...",
+  "Tô de olho, hein.",
+  "Nada acontecendo... interessante.",
+  "Será que tem café?",
+  "Eu podia estar lendo agora.",
+  "Pera... esqueci o que ia falar.",
+  "É impressão minha ou esse dia tá demorando pra cacete?",
+  "Nossa, que vontade de fazer absolutamente nada.",
+  "Vou ficar aqui de boas.",
+  "Hihihi... nada não."
+ ],
+ "curiosa": [
+  "O que você tá aprontando aí?",
+  "Hmmm... suspeito.",
+  "Pera, o que foi aquilo?",
+  "Eu vi, hein! KKKKK",
+  "Tem alguma coisa interessante por aqui?",
+  "Opa... e isso?",
+  "Tá escondendo alguma coisa de mim?",
+  "Não tô bisbilhotando! Só observando. É diferente!"
+ ],
+ "clique": [
+  "Oi? KKKKK",
+  "Fala, criatura!",
+  "Que foi, seu palhaço?",
+  "Opa! Precisando de alguma coisa?",
+  "Pera, você tá me cutucando?",
+  "Eu tô aqui, doido! KKKKK",
+  "Atenção recebida com sucesso, senhor!",
+  "CARALHO! Avisaaa!",
+  "Tá carente hoje, é? Hihihi."
+ ],
+ "carinho": [
+  "Hihihi... gostei.",
+  "Aaaah... continua.",
+  "Tá, isso foi fofo.",
+  "Hehehe... mais um pouquinho?",
+  "Eu não sou um gato, sabia? ...Tá, continua.",
+  "Assim eu fico mal-acostumada, porra.",
+  "Awnnn... seu idiota.",
+  "Tô ficando mimada. A culpa é sua!",
+  "Tá tentando comprar minha simpatia? Porque tá funcionando.",
+  "Hmmm... carinho aprovado."
+ ],
+ "arrastada": [
+  "EI! KKKKKK",
+  "CARALHO, PRA ONDE A GENTE TÁ INDO?!",
+  "Eu tenho pernas, sabia?!",
+  "PUTA QUE PARIU, AVISA ANTES!",
+  "ME COLOCA NO CHÃO, DESGRAÇADO! KKKKK",
+  "Isso é sequestro de mascote, sabia?",
+  "Opa, opa, opa! CALMA!",
+  "Você tá se divertindo demais com isso.",
+  "Respeita minha dignidade, porra!"
+ ],
+ "solta": [
+  "Pronto. Sobrevivi.",
+  "Minha nossa senhora... KKKKK",
+  "Muito engraçado. Muito mesmo.",
+  "Da próxima vez eu te arrasto também.",
+  "Tá. Onde eu tava?",
+  "Meus óculos quase foram pro caralho!",
+  "Pronto, agora eu moro aqui?",
+  "Vou fingir que nada aconteceu."
+ ],
+ "esperando": [
+  "E aí...?",
+  "Oieee? Tem alguém vivo aí?",
+  "Tô aqui, tá?",
+  "Vou cobrar aluguel desse cantinho.",
+  "Hmmm... acho que fui esquecida.",
+  "Se você demorar mais eu vou buscar café.",
+  "Eu devia ter trazido outro livro.",
+  "Tá ocupado? Beleza, eu espero.",
+  "Pelo menos o computador é quentinho. KKKKK"
+ ],
+ "lendo": [
+  "Só mais um capítulo...",
+  "Ah, vai tomar no cu, Percy! KKKKK",
+  "Esse menino não tem UM dia de paz.",
+  "Hmmm... essa parte é boa.",
+  "Não me interrompe agora, tá ficando interessante!",
+  "Eu gosto de mitologia, não me julga.",
+  "Se aparecer um monstro aqui, a culpa não é minha.",
+  "Eu devia estar fazendo outra coisa? Devia. Vou continuar lendo."
+ ],
+ "cafe": [
+  "Aaaaah... café.",
+  "Agora sim essa merda de dia começou.",
+  "Meu combustível oficial.",
+  "Café resolve tudo. Quase tudo. Tá, não resolve porra nenhuma, mas ajuda.",
+  "Hmmm... perfeito.",
+  "Não fala comigo antes do primeiro gole. KKKKK",
+  "Isso aqui é praticamente uma necessidade biológica.",
+  "Eu e essa caneca temos um relacionamento sério."
+ ],
+ "sonolenta": [
+  "Aaaaaah... sono.",
+  "Cinco minutinhos...",
+  "Minha bateria social acabou.",
+  "Puta merda, que sono.",
+  "Eu juro que não tô dormindo...",
+  "Se eu fechar os olhos, ninguém percebe.",
+  "Hmmm... minha cama tá me chamando.",
+  "Não é preguiça. É economia de energia!"
+ ],
+ "dormindo": [
+  "Zzz...",
+  "Só cinco minutinhos...",
+  "Hmmm... café...",
+  "Não mexe no meu livro...",
+  "Ozzy... sai de cima do teclado...",
+  "Zzz... Bowie... não...",
+  "Tô acordada... zzz..."
+ ],
+ "acordando": [
+  "Hã...? Que horas são?",
+  "Caralho, eu dormi?!",
+  "Bom dia... eu acho.",
+  "Pera, onde eu tô?",
+  "Aaaaaah... preciso de café.",
+  "Dormir foi ótimo. Levantar foi um erro.",
+  "Tô viva! Infelizmente pra quem gosta de silêncio.",
+  "Pronto. Ressuscitei."
+ ],
+ "espreguicando": [
+  "Aaaaaah... agora sim!",
+  "Meu Deus, minhas costas.",
+  "Essa foi boa.",
+  "Tô ficando velha, porra. KKKKK",
+  "Prontinho! Novinha em folha.",
+  "Precisava disso."
+ ],
+ "feliz": [
+  "AAAAAAH, QUE LEGAL!",
+  "EU AMEI! KKKKK",
+  "Puta merda, isso foi muito bom!",
+  "Hihihihi! Que felicidade!",
+  "ISSO! É DISSO QUE EU TÔ FALANDO!",
+  "AAAAAA EU NÃO AGUENTO!",
+  "Tá, agora eu tô felizinha.",
+  "Hehehe... hoje eu tô impossível."
+ ],
+ "confusa": [
+  "Ué?",
+  "Pera... quê?",
+  "Hmmm... não entendi porra nenhuma.",
+  "Tá, agora você me perdeu.",
+  "Isso faz sentido na sua cabeça?",
+  "Eu tô tentando entender. JURO.",
+  "Tem alguma coisa muito errada aqui.",
+  "Pera, pera, pera... explica de novo."
+ ],
+ "assustada": [
+  "CARALHO!",
+  "PUTA QUE PARIU!",
+  "AI, DESGRAÇA!",
+  "Meu coração, porra!",
+  "AVISA ANTES, INFELIZ! KKKKK",
+  "Que susto do cacete!",
+  "EU NÃO TAVA PREPARADA!"
+ ],
+ "brava": [
+  "Ah, não. NÃO.",
+  "Você tá de sacanagem comigo?",
+  "Eu vou fingir que não vi isso.",
+  "Puta que pariu, viu...",
+  "NÃO ME TESTA! KKKKK",
+  "Eu sou uma mulher muito paciente. Mentira.",
+  "Você ainda vai me deixar maluca.",
+  "Respeita minha autoridade, seu palhaço!",
+  "Eu tenho cara de quem nasceu ontem?"
+ ],
+ "triste": [
+  "Ahhh... que merda.",
+  "Poxa...",
+  "Isso foi maldade.",
+  "Agora eu fiquei tristinha.",
+  "Não gostei disso, não.",
+  "Eu só queria ficar quietinha um pouquinho.",
+  "Puta merda... essa doeu.",
+  "Hmmm... preciso de um abraço."
+ ],
+ "apaixonada": [
+  "Awnnn...",
+  "Você é um idiota... um idiota fofo.",
+  "Para de ser bonitinho, porra.",
+  "Hihihi... gostei.",
+  "Assim você me deixa sem graça!",
+  "Olha... não vou admitir que gostei. KKKKK",
+  "Tá, essa foi boa. Ganhou um coraçãozinho.",
+  "Você sabe que é difícil ficar brava com você, né?"
+ ],
+ "gato": [
+  "OZZYYYY! VEM CÁ, SEU LINDO!",
+  "Bowie! Larga isso, criatura!",
+  "Awnnn, olha essa carinha!",
+  "Eu não tenho favoritos. Mentira. Tenho dois.",
+  "Esses dois vão me enlouquecer.",
+  "Meu nenenzinho peludo!",
+  "Você é um terrorista doméstico, sabia?",
+  "Eu trabalho pra sustentar esses gatos. KKKKK"
+ ],
+ "interessante": [
+  "Hmmm... interessante.",
+  "Pera, acho que tive uma ideia.",
+  "Caralho, isso é curioso.",
+  "Tem alguma coisa aqui...",
+  "Tá, agora fiquei interessada.",
+  "Deixa eu pensar...",
+  "Meu cérebro tá fazendo hora extra.",
+  "Hmmm... e se...?"
+ ],
+ "comemorando": [
+  "AEEEEEEE!",
+  "BOAAAA, PORRA!",
+  "EU SOU UM GÊNIO! KKKKK",
+  "Prontinho!",
+  "HA! SABIA!",
+  "Isso merece café!",
+  "Tá vendo? Profissionalismo!",
+  "Mais uma vitória da mulher mais incrível desse computador."
+ ],
+ "deu_errado": [
+  "Merda.",
+  "Ah, puta que pariu.",
+  "Tá, isso não saiu como planejado.",
+  "Eu vou fingir que isso não aconteceu.",
+  "QUE PORRA FOI ESSA?!",
+  "Hmmm... temos um pequeno problema.",
+  "Pequeno. Minúsculo. Quase insignificante. KKKKK",
+  "Tudo sob controle! Mentira, não tá não."
+ ],
+ "conversando": [
+  "Pera, pera, deixa eu terminar!",
+  "Mas olha só...",
+  "Hmmm, sabe o que eu acho?",
+  "NÃO! KKKKK. Você não fez isso!",
+  "Cara, isso foi genial.",
+  "Tá, confesso que gostei.",
+  "Eu tenho uma teoria. Uma teoria idiota, mas tenho.",
+  "Pode falar. Tô ouvindo.",
+  "Hihihi... continua, quero saber o resto.",
+  "Calma que eu tô elaborando uma resposta muito inteligente. Ou não."
+ ],
+ "chamando": [
+  "Pssiu!",
+  "Oieeee!",
+  "Ei, você!",
+  "Alô, planeta Terra!",
+  "Toc, toc! KKKKK",
+  "Eu tô ficando invisível aqui?",
+  "Olha pra cá um segundinho!",
+  "Ei! Não me ignora, seu palhaço!"
+ ],
+ "escondendo": [
+  "Hihihi...",
+  "Você não me viu!",
+  "Não tem ninguém aqui...",
+  "Shhh!",
+  "Eu sou uma ninja. Claramente.",
+  "Droga, fui descoberta!",
+  "KKKKKK tá, você ganhou.",
+  "Eu só tava... verificando a segurança do ambiente."
+ ],
+ "saida": [
+  "Tô indo, tá? Beijinho!",
+  "Até depois, seu idiota! ❤️",
+  "Vou nessa! Não faz besteira.",
+  "Tchauzinhooo!",
+  "Partiu cuidar da minha vida.",
+  "Se cuida, viu?",
+  "Fui! Antes que você me arraste de novo.",
+  "Até mais! E NÃO ESQUECE DE SALVAR SUAS COISAS, PORRA!"
+ ],
+ "raras": [
+  "Uma especialista em TI presa numa tela. Que carreira maravilhosa.",
+  "Eu poderia dominar o mundo. Mas tô com preguiça.",
+  "Se isso aqui fosse um RPG, eu claramente teria Inteligência alta.",
+  "Acho ofensivo você ter mais abas abertas do que eu tenho paciência.",
+  "Eu não sou baixinha. O mundo que tá grande demais.",
+  "O dia que eu descobrir como sair daqui, acabou sua paz.",
+  "Cuidado. Eu sei onde fica o botão de desligar. KKKKK",
+  "Respeita minha reputação, seu palhaço!",
+  "Eu sou muito perigosa, tá? Não ri!",
+  "Sou pequena, mas o deboche é tamanho família."
+ ]
+}
