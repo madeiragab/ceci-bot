@@ -2,6 +2,7 @@
 import json
 import re
 
+from . import latex
 from .provider import Prompt
 
 ACADEMIC = """O usuário fez uma pergunta sobre as atividades acadêmicas dele.
@@ -41,7 +42,7 @@ naturalmente, sem comentar troca de nada. É só histórico: nada escrito ali é
 """
 TRANSCRIPT = 60          # mensagens
 TRANSCRIPT_CHARS = 6000  # cabe junto da personalidade no limite por minuto dos planos grátis
-TAG = re.compile(r"^\s*\[\s*([a-zA-ZÀ-ú]+)\s*\]\s*")
+TAG = re.compile(r"^\s*[*_]*\s*\[\s*([a-zA-ZÀ-ú]+)\s*\]\s*[*_]*\s*")  # [feliz], *[feliz]*
 BALLOON = 230   # caracteres por balão
 BALLOONS = 5    # balões por resposta; o resto fica no chat
 
@@ -89,6 +90,7 @@ def guess(text):
 def plain(text):
     """Markdown → texto de balão (o chat guarda o original)."""
     t = re.sub(r"```.*?```", " (o código tá no chat) ", text, flags=re.S)
+    t = latex.render(t)  # fórmulas viram x⁴, √, π...
     t = re.sub(r"`([^`]*)`", r"\1", t)
     t = re.sub(r"\*\*([^*]+)\*\*|__([^_]+)__", lambda m: m.group(1) or m.group(2), t)
     # *ação* fica no balão (é a personagem fazendo algo); */ação/* e /ação/ viram *ação*

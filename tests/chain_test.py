@@ -303,6 +303,15 @@ check("make_provider: corrente com todos os serviços", isinstance(make_provider
       and len(make_provider("corrente").entries) == len(CHAIN))
 check("chaves fora do projeto (pasta de configuração)", os.path.dirname(keys.PATH) == CONFIG_DIR)
 
+# 15. fórmulas e emoji
+from ceci.ia import latex, prompts  # noqa: E402
+check("LaTeX: $x^4$, fração, raiz, grego viram texto legível",
+      latex.render(r"$$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$") == "x = (-b ± √(b² - 4ac))/2a"
+      and latex.render(r"com $x^4$ e \(\alpha_1 \geq \pi\)") == "com x⁴ e α₁ ≥ π")
+check("LaTeX: dinheiro (R$ 5 e R$ 10) não vira fórmula", latex.render("R$ 5 e R$ 10") == "R$ 5 e R$ 10")
+check("balão: fórmula convertida e emoji mantido", prompts.plain(r"Fácil 😂 $x^2$ por $y$") == "Fácil 😂 x² por y")
+check("etiqueta de humor com asteriscos (*[curiosa]*) é lida", prompts.parse("*[curiosa]* Cecinha?") == ("Cecinha?", "curiosa"))
+
 srv.shutdown()
 print("\n" + ("TUDO OK" if not fails else f"{len(fails)} FALHA(S): {fails}"))
 sys.exit(1 if fails else 0)

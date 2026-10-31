@@ -95,6 +95,7 @@ class Bubble(QWidget):
     def set_scale(self, scale):
         self.k = min(1.4, max(0.8, (scale / 0.55) ** 0.5))
         self.font_ = QFont("Segoe UI")
+        self.font_.setFamilies(["Segoe UI", "Segoe UI Emoji", "Segoe UI Symbol", "Cambria Math"])  # emoji colorido e símbolos
         self.font_.setPointSizeF(10.5 * self.k)
         self.font_.setWeight(QFont.DemiBold)
         self.fm = QFontMetricsF(self.font_)

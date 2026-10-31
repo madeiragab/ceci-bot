@@ -10,7 +10,7 @@ from .clock import stamp
 from .texts import freshness
 
 QSS = """
-QWidget { background: #141114; color: #f1eaea; font-family: 'Segoe UI'; font-size: 10pt; }
+QWidget { background: #141114; color: #f1eaea; font-family: 'Segoe UI', 'Segoe UI Emoji', 'Cambria Math'; font-size: 10pt; }
 QLabel#title { font-size: 15pt; font-weight: 700; }
 QLabel#muted { color: #a8999c; }
 QLabel#warn { color: #ffb4a8; }
