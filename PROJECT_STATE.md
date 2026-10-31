@@ -169,11 +169,20 @@
   46 atividades): 59 requisições, 0,7 s, 0,38 s de CPU, +2,6 MB, 0 processos filhos. Login: pico de 9 processos
   (Edge + driver) e ~500 MB por ~3 s; 0 processos depois.
 
+### Verificado com a conta real (31/10, login feito pelo usuário)
+- Login pelo .exe (Edge pela janela do Playwright empacotado), sessão salva e calendário exportado disponível.
+- Consultas reais: 35 disciplinas e 144 atividades, resultado "ok", 126–180 s (pausa de 0,15 s entre requisições).
+- Prazos conferidos com o texto do título das atividades ("Prazo: 07/10" → 07/10 23:59; "até 03/11 às 23:59").
+- Tarefa: o status de envio bate com a página ("Enviado para avaliação" → entregue; "Nenhum envio foi feito ainda"
+  → não enviada).
+- Questionário: o leitor procurava a tabela antiga `quizattemptsummary`, mas a Sala Virtual (Moodle 4.5) mostra
+  um cartão por tentativa com `quizreviewsummary` ("Situação: Finalizada") e o botão em `quizstartbuttondiv`.
+  Resultado: 0 de 22 questionários aparecia como feito. Corrigido; na consulta seguinte, 9 foram reconhecidos como
+  entregues. O Moodle de teste agora imita esse HTML. Seis questionários fechados não mostram tentativa nem botão:
+  ficam como "desconhecido".
+
 ### Não verificado ainda (Fase 2)
-- **Nada foi lido da Sala Virtual de verdade**: precisa do login do usuário. Não verificados: o HTML real das
-  páginas de tarefa/questionário no tema academi (os leitores seguem os templates do Moodle 4), se a
-  instituição deixa o calendário exportado ligado, e o tempo real de uma consulta.
-- Login pelo .exe (driver do Playwright dentro do pacote) e clique na notificação do Windows.
+- Clique na notificação do Windows; consulta automática das 08:00 com a sessão já expirada (fallback pelo calendário).
 
 ## Testado de verdade
 - `tests/speech_test.py` (24 checagens): escreve letra a letra, balão acima da cabeça e dentro da

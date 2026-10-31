@@ -246,21 +246,21 @@ def parse_assign(text):
 
 
 def parse_quiz(text):
-    """Questionário: tentativa finalizada = enviado; em andamento = ainda não finalizado."""
-    sub = None
-    i = text.find("quizattemptsummary")
-    if i >= 0:
-        seg = text[i:i + 20000]
-        end = seg.find("</table>")
-        t = text_of(seg[:end] if end > 0 else seg).lower()
-        if re.search(r"finalizad|finished|submitted", t):
-            sub = "enviado"
-        elif re.search(r"em andamento|in progress|atrasad|overdue", t):
-            sub = "rascunho"
-        else:
-            sub = "nenhum"
-    elif re.search(r"tentar responder|iniciar tentativa|fazer uma tentativa|attempt quiz", text, re.I):
+    """Questionário: tentativa finalizada = enviado; em andamento = ainda não finalizado.
+
+    Moodle 4.x (a Sala Virtual): um cartão por tentativa com a tabela `quizreviewsummary` ("Situação: Finalizada").
+    Moodle antigo: uma tabela `quizattemptsummary` com todas."""
+    tables = re.findall(r"quiz(?:attempt|review)summary(.*?)</table>", text, re.S)
+    t = " ".join(text_of(x) for x in tables).lower()
+    if re.search(r"finalizad|finished|submitted", t):
+        sub = "enviado"
+    elif re.search(r"em andamento|in progress|atrasad|overdue", t):
+        sub = "rascunho"
+    elif tables or "quizstartbuttondiv" in text or re.search(
+            r"tentar responder|iniciar tentativa|fazer uma tentativa|tentativa do question|attempt quiz", text, re.I):
         sub = "nenhum"
+    else:
+        sub = None
     ok = sub is not None or "quizinfo" in text or "activity-dates" in text
     return {"sub": sub, "dates": parse_dates(text), "summary": "", "ok": ok}
 

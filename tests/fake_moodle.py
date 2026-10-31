@@ -213,11 +213,16 @@ class Handler(BaseHTTPRequestHandler):
             body += (f"<div id='intro'><div>Instruções de {a['name']}</div></div><table class='submissionstatustable'>"
                      f"<tr><th>Status de envio</th><td{cls}>{cell}</td></tr></table>")
         elif mod == "quiz":
+            # como a Sala Virtual de verdade (Moodle 4.5): um cartão por tentativa com a tabela quizreviewsummary
             if a.get("state"):
-                body += ("<table class='quizattemptsummary'><tr><td>"
-                         + ("Finalizada" if a["state"] == "finished" else "Em andamento") + "</td></tr></table>")
+                body += ("<div class='box py-3 quizinfo'>Tentativas permitidas: 2</div><h3>Suas tentativas</h3>"
+                         "<div class='card'><h4>Tentativa 1</h4><table class='generaltable generalbox quizreviewsummary'>"
+                         "<tr><th class='cell' scope='row'>Situação</th><td class='cell'>"
+                         + ("Finalizada" if a["state"] == "finished" else "Em andamento") + "</td></tr></table></div>")
             else:
-                body += "<div class='quizinfo'></div><button>Tentar responder o questionário agora</button>"
+                body += ("<div class='singlebutton quizstartbuttondiv'><form method='post'><button type='submit'>"
+                         "Tentativa do questionário</button></form></div><div class='box py-3 quizinfo'>"
+                         "Tentativas permitidas: 3</div>")
         return self._send(200, self._page(body))
 
     def _ical(self, q):
