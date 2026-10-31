@@ -61,6 +61,8 @@ class App:
         self.win = CeciWindow(self.s)
         self.beh = Behavior(self.win, self.s)
         self.speech = Speech(self.win, self.s)
+        self.hold = None  # animação de cena segurada enquanto a resposta é falada
+        self.speech.bubble.ended.connect(self._release_hold)
         self.win.context_menu.connect(self._menu)
         self.win.double_clicked.connect(self.ask)
         self.sala = SalaVirtual(is_fullscreen=fullscreen_app_active)
@@ -168,8 +170,18 @@ class App:
         if aid and not w.dragging:
             w.stop_walk()
             self.speech.muted = aid  # a fala é a resposta, não a automática da animação
-            w.play(aid, force=True)
+            # cena com trecho que repete (café, livro, gato...): segura enquanto ela fala, sem passar correndo
+            loop = w.sprites.anims.get(aid, {}).get("loop")
+            w.play(aid, force=True, **({"loops": "inf"} if loop else {}))
+            self.hold = aid if loop else None
         self.speech.say_many(lines)
+
+    def _release_hold(self):
+        """Terminou de falar: a cena que estava segurando sai pelo fim dela e volta pro idle."""
+        if self.hold and not self.speech.queue and not self.speech.bubble.typing():
+            if self.win.player.aid == self.hold and not self.win.exiting:
+                self.win.play("idle", force=True)
+            self.hold = None
 
     # --- caixinha do clique duplo ---
     def ask(self):
