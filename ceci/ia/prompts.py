@@ -77,6 +77,7 @@ def action_anim(text):
 
 
 TAG = re.compile(r"^\s*[*_]*\s*\[\s*([a-zA-ZÀ-ú]+)\s*\]\s*[*_]*\s*")  # [feliz], *[feliz]*
+ANYTAG = re.compile(r"[*_]*[\[(]\s*(" + "|".join(MOODS) + r")\s*[\])][*_]*", re.I)
 BALLOON = 230   # caracteres por balão
 BALLOONS = 5    # balões por resposta; o resto fica no chat
 
@@ -109,7 +110,15 @@ def parse(raw):
         text = text[m.end():].strip()
         tag = m.group(1).lower()
         mood = tag if tag in MOODS else None
-    return text, mood or guess(text)
+    found = ANYTAG.search(text)  # etiqueta perdida no meio ou no fim: vira animação, nunca texto
+    if found and not mood:
+        mood = found.group(1).lower()
+    return untag(text), mood or guess(text)
+
+
+def untag(text):
+    """Tira qualquer etiqueta de humor ([feliz], *[rindo]*, (curiosa)) de qualquer lugar do texto."""
+    return re.sub(r"[ \t]{2,}", " ", ANYTAG.sub(" ", text or "")).strip()
 
 
 def guess(text):

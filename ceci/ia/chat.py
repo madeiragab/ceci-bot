@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (QDialog, QGridLayout, QHBoxLayout, QLabel, QLineE
                                QTextBrowser, QVBoxLayout, QWidget)
 
 from ..sala.ui import QSS
-from . import keys, latex
+from . import keys, latex, prompts
 from .chain import SERVICES
 
 CSS = (".u { color: #f1eaea; margin: 8px 0 0 60px; } .c { color: #f1eaea; margin: 8px 60px 0 0; }"
@@ -26,7 +26,7 @@ def _body(text):
         if code:
             out.append("<pre>" + html.escape(part.split("\n", 1)[-1] if "\n" in part else part) + "</pre>")
         else:
-            out.append(html.escape(latex.render(part)).replace("\n", "<br>"))
+            out.append(html.escape(latex.render(prompts.untag(part))).replace("\n", "<br>"))
         code = not code
     return "".join(out)
 

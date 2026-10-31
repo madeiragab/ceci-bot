@@ -105,7 +105,7 @@ def parse(raw, wants):
         ok = []
         for s in items:
             if isinstance(s, str):
-                s = prompts.TAG.sub("", s).strip().strip('"')
+                s = prompts.untag(s).strip().strip('"')
                 if 2 <= len(s) <= MAX_LEN and s not in ok:
                     ok.append(s)
         if ok:

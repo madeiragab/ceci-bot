@@ -150,6 +150,10 @@ ai.handle("oi ceci")
 wait(lambda: out)
 check("conversa: a IA recebe a data e a hora do PC", now_text(clock[0]) in fake2.calls[0].system)
 check("conversa: *boceja* na resposta → animação sonolenta (no lugar do humor)", out and out[0]["anim"] == "sonolenta")
+check("etiqueta de humor em qualquer lugar/formato vira animação e some do texto",
+      prompts.parse("*[curiosa]* Cecinha?") == ("Cecinha?", "curiosa")
+      and prompts.parse("Opa, porra! [feliz]") == ("Opa, porra!", "feliz")
+      and prompts.parse("Puta merda (rindo) KKKK") == ("Puta merda KKKK", "rindo"))
 
 print("\n" + ("TUDO OK" if not fails else f"{len(fails)} FALHA(S): {fails}"))
 sys.exit(1 if fails else 0)
