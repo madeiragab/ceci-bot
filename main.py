@@ -180,13 +180,13 @@ class App:
             ready()
 
 
-def already_running():
+def already_running(name="CeciBot.SingleInstance"):
     """Outra Ceci já aberta? Duas por cima uma da outra parecem animação bugada (mutex nomeado do Windows)."""
     if sys.platform != "win32":
         return False
     k = ctypes.WinDLL("kernel32", use_last_error=True)
     k.CreateMutexW.restype = ctypes.c_void_p
-    main.mutex = k.CreateMutexW(None, False, "CeciBot.SingleInstance")  # fica aberto enquanto o app roda
+    main.mutex = k.CreateMutexW(None, False, name)  # fica aberto enquanto o app roda
     return ctypes.get_last_error() == 183  # ERROR_ALREADY_EXISTS
 
 

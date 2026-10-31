@@ -11,9 +11,10 @@ from .engine import Player
 from .sprites import Sprites
 
 CANVAS_W, CANVAS_H, FOOT_MARGIN = 640, 590, 100  # em px de sprite (escala 1.0); margem: pernas na barra
-DRAG_START = 6
+DRAG_START, DRAG_QUICK, DRAG_HOLD = 6, 22, 0.25  # px parado/segurando; px num clique rápido; s até "segurar"
 INTERACT = ("acenando", "feliz", "beijinho", "coracao", "fofa")  # clique ou menu Interagir
-PET_PASSES, PET_STROKE, PET_WINDOW = 5, 25, 3.0  # carinho: 5 idas e vindas (≥ 25 px) sobre a cabeça em 3 s
+PET_PASSES, PET_STROKE, PET_WINDOW = 5, 30, 3.0  # carinho: 5 idas e vindas (≥ 30 px) no MESMO eixo em 3 s
+PET_CONFIRM = 450  # ms: clicou logo depois? era só a mira chegando nela — vale o clique, não o carinho
 SPIN_WINDOW, SPIN_PATH, SPIN_TURN = 1.5, 500, 3 * math.pi  # girada/sacudida: 1,5 volta (ou 3 idas e vindas)
 SPIN_AGAIN = 6.0  # s até poder reclamar de novo se continuar girando
 EYE_HOLD = 1.5       # s mínimos olhando numa direção antes de trocar
@@ -58,13 +59,12 @@ class CeciWindow(QWidget):
         self.last_move = time.monotonic()
         self.move_timer = QTimer(self, timeout=self._move_tick)
 
-        self.press = None
+        self.press, self.press_t = None, 0.0
         self.dragging = False
         self.drag_off = QPointF()
-        self.rub = []               # momentos em que o cursor mudou de sentido sobre a cabeça
-        self.rub_last = None
-        self.rub_run = {"x": (0, 0.0), "y": (0, 0.0)}  # sentido e comprimento da passada atual
+        self._reset_rub()
         self.last_pet = 0.0
+        self.pet_timer = QTimer(self, singleShot=True, timeout=self.pet)
         self.eyes_on = False
         self.eyes_idx = None
         self.eyes_last_near = 0.0
@@ -444,13 +444,20 @@ class CeciWindow(QWidget):
             self.context_menu.emit(e.globalPosition().toPoint())
             return
         if e.button() == Qt.LeftButton:
+            self.pet_timer.stop()  # clique cancela o carinho que a mira acabou de "desenhar"
+            self._reset_rub()
             self.press = (e.globalPosition(), self._hit(e.position()))
+            self.press_t = time.monotonic()
             self.drag_off = self.foot - e.globalPosition()
 
     def mouseMoveEvent(self, e):
         if self.press and e.buttons() & Qt.LeftButton:
             gp = e.globalPosition()
-            if not self.dragging and (gp - self.press[0]).manhattanLength() > DRAG_START:
+            moved = (gp - self.press[0]).manhattanLength()
+            held = time.monotonic() - self.press_t
+            # clique com a mão tremendo (ou toque no touchpad) não levanta a Ceci: no começo do clique só um
+            # puxão de verdade (DRAG_QUICK) vira arraste; segurando um pouco, basta mexer DRAG_START
+            if not self.dragging and (moved > DRAG_QUICK or (held >= DRAG_HOLD and moved > DRAG_START)):
                 self._start_drag()
             if self.dragging:
                 self._drag_to(gp + self.drag_off)
@@ -461,11 +468,18 @@ class CeciWindow(QWidget):
         else:
             self.rub_last = None
 
+    def _reset_rub(self):
+        self.rub = {"x": [], "y": []}  # momentos em que o cursor mudou de sentido, por eixo
+        self.rub_last = None
+        self.rub_run = {"x": (0, 0.0), "y": (0, 0.0)}  # sentido e comprimento da passada atual
+
     def _rub(self, pos):
-        """Conta as idas e vindas do cursor sobre a cabeça; PET_PASSES delas em PET_WINDOW s = carinho."""
+        """Conta as idas e vindas do cursor sobre a cabeça; PET_PASSES delas no mesmo eixo em PET_WINDOW s =
+        carinho. Eixos separados: o caminho torto da mira até ela (um pouco em x, um pouco em y) não soma."""
         now = time.monotonic()
         last, self.rub_last = self.rub_last, QPointF(pos)
-        self.rub = [t for t in self.rub if now - t < PET_WINDOW]
+        for axis in self.rub:
+            self.rub[axis] = [t for t in self.rub[axis] if now - t < PET_WINDOW]
         if last is None:
             return
         d = pos - last
@@ -478,12 +492,12 @@ class CeciWindow(QWidget):
                 run_len += abs(v)
             else:
                 if run_len >= PET_STROKE * self.sprites.scale:
-                    self.rub.append(now)
+                    self.rub[axis].append(now)
                 run_dir, run_len = sgn, abs(v)
             self.rub_run[axis] = (run_dir, run_len)
-        if len(self.rub) >= PET_PASSES:
-            self.rub = []
-            self.pet()
+        if max(len(v) for v in self.rub.values()) >= PET_PASSES and not self.pet_timer.isActive():
+            self._reset_rub()
+            self.pet_timer.start(PET_CONFIRM)
 
     def mouseReleaseEvent(self, e):
         if e.button() != Qt.LeftButton or not self.press:

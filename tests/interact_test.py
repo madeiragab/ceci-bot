@@ -11,12 +11,13 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ["CECI_CONFIG_DIR"] = tempfile.mkdtemp(prefix="cecibot_test_")  # nunca as do usuário
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from PySide6.QtCore import QPointF, Qt, QTimer  # noqa: E402
+from PySide6.QtCore import QEvent, QPointF, Qt, QTimer  # noqa: E402
+from PySide6.QtGui import QMouseEvent  # noqa: E402
 from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 import main as M  # noqa: E402
-from ceci.window import CANVAS_H, INTERACT, PET_PASSES  # noqa: E402
+from ceci.window import CANVAS_H, INTERACT, PET_CONFIRM, PET_PASSES  # noqa: E402
 
 qa = QApplication(sys.argv)
 fails = []
@@ -62,17 +63,70 @@ def rub(points):
         w._rub(p)
 
 
-def step2():
-    w.play("idle", force=True, cut=True)
-    w.last_pet = 0.0
-    rub([head + QPointF(-30 * s + 6 * s * k, 0) for k in range(11)])  # uma passada só, sem voltar
-    check("uma passada só não é carinho", w.player.aid != "carinho")
+def zigzag():
     zig = []
     for n in range(PET_PASSES + 2):  # vai e volta várias vezes sobre a cabeça
         xs = range(11) if n % 2 == 0 else range(10, -1, -1)
         zig += [head + QPointF(-30 * s + 6 * s * k, 0) for k in xs]
-    rub(zig)
+    return zig
+
+
+def step2():
+    w.play("idle", force=True, cut=True)
+    w.last_pet = 0.0
+    rub([head + QPointF(-30 * s + 6 * s * k, 0) for k in range(11)])  # uma passada só, sem voltar
+    # mira chegando na cabeça: caminho torto, com correções nos dois eixos (antes somava e virava carinho)
+    aim, p = [], head + QPointF(-140 * s, 160 * s)
+    for k, (dx, dy) in enumerate([(30, -40), (25, -35), (-18, -30), (28, -25), (-20, 22), (24, -26), (-22, 20),
+                                  (26, -24), (-24, 22), (20, -18), (10, 4), (-6, -5)]):
+        p = p + QPointF(dx * s, dy * s)
+        aim.append(QPointF(p))
+    rub(aim)
+    QTimer.singleShot(PET_CONFIRM + 150, step2b)
+
+
+def step2b():
+    check("uma passada só ou a mira chegando não viram carinho", w.player.aid != "carinho")
+    rub(zigzag())
+    QTimer.singleShot(PET_CONFIRM + 150, step2c)
+
+
+def step2c():
     check("passar o mouse várias vezes pela cabeça = carinho", w.player.aid == "carinho")
+    w.play("idle", force=True, cut=True)
+    w.last_pet = 0.0
+    rub(zigzag())  # mexeu bastante e clicou logo em seguida: vale o clique
+    QTest.mouseClick(w, Qt.LeftButton, Qt.NoModifier, head.toPoint())
+    QTimer.singleShot(PET_CONFIRM + 150, step2d)
+
+
+def step2d():
+    check("mexer e clicar logo depois = Interagir, não carinho", w.player.aid in INTERACT)
+    QTimer.singleShot(200, step_hold)
+
+
+def mev(kind, pos, buttons):
+    gp = w.mapToGlobal(pos.toPoint())
+    QApplication.sendEvent(w, QMouseEvent(kind, QPointF(pos), QPointF(gp), Qt.LeftButton, buttons, Qt.NoModifier))
+
+
+def step_hold():
+    sp.hide()
+    w.play("idle", force=True, cut=True)
+    mev(QEvent.MouseButtonPress, body, Qt.LeftButton)  # clique com a mão tremendo (14 px)
+    mev(QEvent.MouseMove, body + QPointF(9, 5), Qt.LeftButton)
+    check("clique tremido não levanta a Ceci", not w.dragging)
+    mev(QEvent.MouseButtonRelease, body + QPointF(9, 5), Qt.NoButton)
+    check("clique tremido = Interagir", w.player.aid in INTERACT)
+    w.play("idle", force=True, cut=True)
+    mev(QEvent.MouseButtonPress, body, Qt.LeftButton)
+    QTimer.singleShot(320, step_hold2)
+
+
+def step_hold2():
+    mev(QEvent.MouseMove, body + QPointF(8, 4), Qt.LeftButton)  # segurou e puxou: aí sim é arraste
+    check("segurar e puxar = arrastar", w.dragging and w.player.aid == "arrastada")
+    mev(QEvent.MouseButtonRelease, body + QPointF(8, 4), Qt.NoButton)
     QTimer.singleShot(200, step3)
 
 
@@ -85,8 +139,9 @@ def step3():
     check("e cabem na janela (nada cortado)", bottom <= w.y() + CANVAS_H * s)
     check("assento na linha do chão (±12 px na arte)", abs(bottom - 67 * w.sprites.scale - g) < 12 * s)
     if sys.platform == "win32":
-        check("primeira Ceci abre", not M.already_running())
-        check("segunda Ceci não abre", M.already_running())
+        name = f"CeciBot.Teste.{os.getpid()}"  # nome próprio: não esbarra na Ceci que estiver aberta
+        check("primeira Ceci abre", not M.already_running(name))
+        check("segunda Ceci não abre", M.already_running(name))
     qa.exit(1 if fails else 0)
 
 
