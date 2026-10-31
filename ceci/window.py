@@ -12,6 +12,8 @@ from .sprites import Sprites
 
 CANVAS_W, CANVAS_H, FOOT_MARGIN = 640, 520, 30  # em px de sprite (escala 1.0)
 DRAG_START = 6
+SPIN_WINDOW, SPIN_PATH, SPIN_TURN = 1.5, 500, 3 * math.pi  # girada/sacudida: 1,5 volta (ou 3 idas e vindas)
+SPIN_AGAIN = 6.0  # s até poder reclamar de novo se continuar girando
 EYE_HOLD = 1.5       # s mínimos olhando numa direção antes de trocar
 EYE_COOLDOWN = 10.0  # s depois de parar de olhar o mouse até poder começar de novo
 FADE_MS = 420  # troca de animação: desenhos diferentes precisam de um dissolve mais longo
@@ -21,7 +23,7 @@ class CeciWindow(QWidget):
     context_menu = Signal(QPoint)
     became_idle = Signal()
     moved = Signal()
-    interaction = Signal(str)  # clique, carinho, arrastada, solta, acordando, olhando (falas)
+    interaction = Signal(str)  # clique, carinho, arrastada, girando, solta, tonta, acordando, olhando (falas)
 
     def __init__(self, settings):
         super().__init__(None)
@@ -488,6 +490,7 @@ class CeciWindow(QWidget):
 
     def _start_drag(self):
         self.dragging, self.lifted = True, False
+        self.spin_pts, self.spun, self.spun_t = [], False, -99.0
         self.walk_target, self.vel, self.fall_v = None, 0.0, None
         self.prev = None
         self.interaction.emit("arrastada")
@@ -502,6 +505,7 @@ class CeciWindow(QWidget):
         x = min(max(p.x(), vg.left() + 40 * s), vg.right() - 40 * s)
         y = min(max(p.y(), vg.top() + 330 * s), vg.bottom() + 1)
         self.foot = QPointF(x, y)
+        self._spin_check(p)
         g = self.ground()
         if y < g - 40 * s:
             self.lifted = True
@@ -513,6 +517,29 @@ class CeciWindow(QWidget):
             self._land(soft=True)
             return
         self._place()
+
+    def _spin_check(self, p):
+        """Girando (ou sacudindo) no ar: muito caminho e muita curva em pouco tempo, não só arrastar reto."""
+        now = time.monotonic()
+        self.spin_pts = [(t, q) for t, q in self.spin_pts if now - t < SPIN_WINDOW] + [(now, QPointF(p))]
+        if now - self.spun_t < SPIN_AGAIN:
+            return
+        path = turn = 0.0
+        last = prev = None
+        for _, q in self.spin_pts:
+            if last is not None:
+                d = q - last
+                n = math.hypot(d.x(), d.y())
+                if n < 3:  # tremidinha do mouse não conta
+                    continue
+                ang = math.atan2(d.y(), d.x())
+                if prev is not None:
+                    turn += abs((ang - prev + math.pi) % (2 * math.pi) - math.pi)
+                path, prev = path + n, ang
+            last = q
+        if path > SPIN_PATH and turn > SPIN_TURN:
+            self.spun, self.spun_t = True, now
+            self.interaction.emit("girando")
 
     def _end_drag(self):
         self.releaseMouse()
@@ -533,7 +560,7 @@ class CeciWindow(QWidget):
         self.save_pos()
         a = self.player.current
         if self.player.aid == "arrastada" and a:
-            self.interaction.emit("solta")
+            self.interaction.emit("tonta" if getattr(self, "spun", False) else "solta")
             self.player.jump(len(a["seq"]) - 1 if soft else a.get("land", len(a["seq"]) - 1))
 
     # ---------- visibilidade ----------

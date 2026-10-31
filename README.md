@@ -25,7 +25,7 @@
 ## ✨ O que ela faz
 
 - **Vive na tela**: janela transparente e sem borda. Os cliques passam pelas áreas vazias, e ela fica sempre por cima das outras janelas (opcional).
-- **Fala com você**: um balão em cima da cabeça escreve letra a letra, como nos RPGs antigos. São 242 frases fixas em 29 situações: cliques, carinho, arraste, café, leitura, sono, o gato e outras. As falas saem em sequência, nunca uma cortando a outra. Não usa IA.
+- **Fala com você**: um balão em cima da cabeça escreve letra a letra, como nos RPGs antigos. São 262 frases fixas em 31 situações: cliques, carinho, arraste, girar ela no ar, café, leitura, sono, o gato e outras. As falas saem em sequência, nunca uma cortando a outra. Não usa IA.
 - **Tem rotina própria**: respira, pisca, ajeita os óculos, lê, toma café, brinca com o gato, cochila e passeia pela tela. Tudo isso por timers e sorteio, sem IA.
 - **Reage a você**:
   - **Mouse**: os olhos seguem o cursor quando você mexe rápido.
@@ -79,6 +79,7 @@ O script gera `%LOCALAPPDATA%\Programs\Ceci Bot\Ceci Bot.exe` com PyInstaller e 
 | Clicar na cabeça ou passar o mouse por cima dela | Carinho |
 | Clicar no corpo | Acena, fica curiosa ou ajeita os óculos |
 | Clicar e arrastar | Fica pendurada. Ao soltar, cai e pousa. |
+| Girar ou sacudir enquanto arrasta | Reclama ("VOU VOMITAR!") e pousa tonta |
 | Clique direito | Menu: Interagir, Falar algo, Passear, Ver animações, Mover para outro canto, Alterar tamanho, Pausar animações, Configurações, Ocultar, Sair |
 | Ícone na bandeja | Mostrar, Ocultar, Pausar animações, Configurações, Sair |
 
@@ -147,6 +148,7 @@ python tests/smoke_test.py    # toca todas as animações sem erro nem quadro fa
 python tests/speech_test.py   # balão letra a letra, fila sem cortar fala, tchau antes de sair
 python tests/settings_test.py # tamanho escolhido continua ao abrir de novo
 python tests/edge_test.py     # anda até a parede antes de esconder; perna sai uma vez só na saída
+python tests/spin_test.py     # girar/sacudir no ar tem falas próprias; arrastar reto não
 ```
 
 Os testes rodam sem abrir janela (`QT_QPA_PLATFORM=offscreen`) e usam uma pasta de configurações temporária.

@@ -124,7 +124,7 @@ def t_landed():
     app.s["speech"] = True
     sp.apply_settings()
     sp.say("dormindo", 3, True)
-    QTimer.singleShot(int(b.remaining_ms() + 2600), t_gone)
+    wait_for(lambda: b.state == "off", t_gone, timeout=20)  # pode ter frase na fila antes
 
 
 def t_gone():

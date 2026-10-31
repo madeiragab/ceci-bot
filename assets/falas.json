@@ -1,5 +1,5 @@
 {
- "_sobre": "Ceci Bot — banco de falas v1.0. Cada categoria é sorteada sem repetir até esgotar. Só reações visuais e brincadeiras: nada aqui afirma que código, testes ou tarefas foram concluídos de verdade.",
+ "_sobre": "Ceci Bot — banco de falas v1.0. Cada categoria é sorteada sem repetir até esgotar. Só reações visuais e brincadeiras: nada aqui afirma que código, testes ou tarefas foram concluídos de verdade. As categorias 'girando' (girada/sacudida no ar) e 'tonta' (pouso depois do giro) foram escritas depois, fora do banco v1.0, e podem ser editadas à vontade.",
  "inicio": [
   "Oieeee! Cheguei! Sentiu saudade? KKKKK",
   "Licença, licença! Sua especialista favorita chegou.",
@@ -77,6 +77,30 @@
   "Meus óculos quase foram pro caralho!",
   "Pronto, agora eu moro aqui?",
   "Vou fingir que nada aconteceu."
+ ],
+ "girando": [
+  "VOU VOMITAR!",
+  "PARA, PORRA!",
+  "PARA PARA PARA PARA PARA!",
+  "AAAAAAAAAAAAH!",
+  "EU NÃO SOU PIÃO, CARALHO!",
+  "MEU ALMOÇO TÁ VOLTANDO!",
+  "ISSO NÃO É MONTANHA-RUSSA, DESGRAÇA!",
+  "SOCORROOOO! KKKKK",
+  "Tô vendo tudo rodando, porra!",
+  "Se eu vomitar, a culpa é SUA!",
+  "MEUS ÓCULOS! MEUS ÓCULOS!",
+  "Chega! Chega! CHEGA!"
+ ],
+ "tonta": [
+  "O mundo tá girando...",
+  "Ai... acho que vou vomitar.",
+  "Minha cabeça... puta merda.",
+  "Nunca mais faz isso. NUNCA MAIS.",
+  "Tô vendo três de você. Que pesadelo.",
+  "Pera... qual lado é pra cima?",
+  "Você vai me pagar por isso. Quando eu parar de girar.",
+  "Hihi... o chão tá dançando... hihi..."
  ],
  "esperando": [
   "E aí...?",

@@ -2,7 +2,7 @@
 
 Sem IA: frases fixas de assets/falas.json, sorteadas sem repetir até esgotar a categoria. Cada animação
 tem a sua categoria (REACT) e fala no começo do miolo (ex.: já com o livro aberto). As interações do
-mouse (clique, carinho, arraste, pouso, acordar) chegam pelo sinal `interaction` da janela e sempre
+mouse (clique, carinho, arraste, girada no ar, pouso, acordar) chegam pelo sinal `interaction` da janela e sempre
 falam; as falas automáticas dependem de uma chance e de um intervalo mínimo entre elas.
 
 Uma fala nunca corta a outra: o que chega com o balão ocupado entra na fila e é dito em sequência
@@ -53,7 +53,7 @@ REACT = {
     "acenando": ("chamando", 0.0, 2),  # chance 0: só quando pedida (menu Interagir, painel)
     "carinho": ("carinho", 1.0, 0), "arrastada": ("arrastada", 1.0, 0),
 }
-PRIO = {"arrastada": 4, "solta": 4, "saida": 5}  # interações valem 3; automáticas, 1; tchau fura a fila
+PRIO = {"arrastada": 4, "girando": 4, "solta": 4, "tonta": 4, "saida": 5}  # interações valem 3; automáticas, 1; tchau fura a fila
 QUEUE_MAX = 3
 AUTO_GAP = 18.0  # s mínimos entre falas automáticas
 CHAT = (45, 110)  # s entre comentários soltos quando está parada

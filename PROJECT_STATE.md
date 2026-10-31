@@ -79,6 +79,12 @@
   - Nunca corta uma fala com outra: com o balão ocupado, interação entra numa fila (até 3, sem repetir
     categoria) e é dita em sequência, com pausa de leitura curta; fala automática é descartada.
   - Cada categoria é sorteada sem repetir até esgotar. Liga/desliga e frequência nas configurações.
+  - Girar ou sacudir no ar (`_spin_check`): em 1,5 s, mais de 500 px de caminho e 1,5 volta de curva
+    (3 idas e vindas também contam) → fala "girando"; pode reclamar de novo a cada 6 s. Pousou depois
+    de girar → "tonta" em vez de "solta". As duas categorias (20 frases) foram escritas por mim fora do
+    banco v1.0 e estão marcadas no `_sobre` do falas.json; total agora 262 frases em 31 categorias.
+- Tamanho "Mínima" (0,25, o menor que as configurações aceitam) no menu Alterar tamanho; conferido na
+  tela com o balão legível (a fonte do balão não encolhe abaixo de 80 %).
 
 ## Testado de verdade
 - `tests/speech_test.py` (24 checagens): escreve letra a letra, balão acima da cabeça e dentro da
@@ -86,6 +92,8 @@
   (início → clique → arraste → pouso) sem cortar nenhuma; ao lado da cabeça quando arrastada lá no
   alto; sem repetição; intervalo das automáticas; desligar; some sozinho; tchau antes de correr.
 - `tests/settings_test.py`: tamanho pelo diálogo e pelo menu continua ao abrir de novo.
+- `tests/spin_test.py`: arrastar reto não conta; girar fala "girando" (depois do arraste, na fila) e
+  pousa "tonta"; sacudir de um lado para o outro também conta.
 - `tests/edge_test.py`: esconder do meio da tela e colada na borda anda antes, encosta (±4 px) e prende
   sem pulo para trás; saída na ordem 0,1,2,4,3,5,6,7. Prévias em `_preview/esconder_strip_*.png` e
   `_preview/saida_strip.png` conferidas.

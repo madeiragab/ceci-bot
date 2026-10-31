@@ -17,7 +17,7 @@ def build_menu(app, tray=False):
         corner.addAction("Canto inferior direito", lambda: app.win.move_to_corner("right"))
         corner.addAction("Canto inferior esquerdo", lambda: app.win.move_to_corner("left"))
         size = m.addMenu("Alterar tamanho")
-        for t, v in (("Pequena", 0.4), ("Média", 0.55), ("Grande", 0.75), ("Enorme", 1.0)):
+        for t, v in (("Mínima", 0.25), ("Pequena", 0.4), ("Média", 0.55), ("Grande", 0.75), ("Enorme", 1.0)):
             size.addAction(t, lambda v=v: app.set_size(v))
     pause = QAction("Pausar animações", m, checkable=True, checked=app.win.player.paused)
     pause.toggled.connect(app.set_paused)
