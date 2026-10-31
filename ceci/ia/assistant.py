@@ -47,6 +47,7 @@ class Assistant(QObject):
         self.retry_text = None       # última que falhou ("tenta de novo")
         self.consent_pending = None  # pergunta acadêmica esperando "sim" para mandar os dados
         self.files = {}              # caminho → texto inteiro dos arquivos entregues (só na memória)
+        self.fresh_file = False      # o próximo envio é a entrega do arquivo (depois ele vai só como consulta)
         self.watchdog = QTimer(self, singleShot=True, timeout=self._expired)
         self._done.connect(self._finish)
 
@@ -126,11 +127,15 @@ class Assistant(QObject):
         prompt.last_provider = self.conv.state["provider"]
         f = self.conv.state.get("file")
         body = self._file_text(f) if f else None
-        if body:  # arquivo que o usuário mandou: vai junto até a próxima "nova conversa" ou outro arquivo
-            part, how = files.excerpt(body, text)
+        fresh, self.fresh_file = self.fresh_file, False
+        if body:  # arquivo que o usuário mandou: na entrega vai como novo; depois, só como consulta quando a
+            # mensagem fala de algo que está nele (até a próxima "nova conversa" ou outro arquivo)
+            part, how = files.excerpt(body, text, generic=fresh)
             cut = (f"Ele tem {len(body)} caracteres; você recebeu {how} (marcados [trecho N de M]). Se a resposta "
                    "não estiver nesses trechos, diga isso em vez de inventar.") if how else ""
-            prompt.message = prompts.FILE.format(name=f["name"], text=part, cut=cut) + "\n\n" + prompt.message
+            if part:
+                tpl = prompts.FILE if fresh else prompts.FILE_REF
+                prompt.message = tpl.format(name=f["name"], text=part, cut=cut) + "\n\n" + prompt.message
         self.busy, self.retry_text = text, None
         self.job += 1
         meta = {"job": self.job, "text": text, "route": r.kind, "keys": keys, "ctx": ctx, "pkey": pkey}
@@ -229,6 +234,7 @@ class Assistant(QObject):
         self.changed.emit()
         q = question or "Lê esse arquivo que eu te mandei e me fala o que achou: do que se trata e o que chama atenção."
         self.state.emit("atencao")
+        self.fresh_file = True
         self.ask(q, router.Route("conversa", "", q))
 
     def _file_text(self, f):

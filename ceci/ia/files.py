@@ -53,14 +53,17 @@ def terms(question):
     return [w for w in re.findall(r"\w+", norm(question)) if len(w) >= 3 and w not in STOP]
 
 
-def excerpt(text, question, limit=LIMIT):
-    """(texto que vai para a IA, descrição do recorte ou "" quando foi inteiro)."""
+def excerpt(text, question, limit=LIMIT, generic=True):
+    """(texto que vai para a IA, descrição do recorte ou "" quando foi inteiro).
+    generic=False (perguntas depois da primeira): pergunta que não fala de nada do arquivo → ("", "")."""
+    q = terms(question)
+    if not generic and not any(t in norm(text) for t in q):
+        return "", ""
     if len(text) <= limit:
         return text, ""
     parts = chunks(text)
     n = len(parts)
     budget = max(1, limit // CHUNK)
-    q = terms(question)
     low = [norm(p) for p in parts] if q else []
     df = {t: sum(1 for p in low if t in p) for t in set(q)}
     scored = []

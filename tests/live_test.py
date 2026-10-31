@@ -167,7 +167,12 @@ check("arquivo: aparece no chat como 📄 e a resposta vem", any(m["text"] == "�
       and out[-1]["text"] == "Hmm, TCC na sexta, porra.")
 ai.handle("quando é o prazo?")
 wait(lambda: len(out) > n + 1)
-check("arquivo: continua junto nas perguntas seguintes", "notas.md" in fake2.calls[-1].message)
+check("arquivo: continua junto nas perguntas seguintes, como consulta (não como entrega nova)",
+      "notas.md" in fake2.calls[-1].message and "ANTES" in fake2.calls[-1].message)
+fake2.replies[:] = ["[feliz] Boa noite, porra."]
+ai.handle("boa noite")
+wait(lambda: len(out) > n + 2)
+check("arquivo: mensagem que não tem a ver com ele vai sem o arquivo", "<arquivo" not in fake2.calls[-1].message)
 ai.reset()
 check("arquivo: nova conversa esquece o arquivo", ai.conv.state["file"] is None)
 pdf = os.path.join(TMP, "x.pdf")
