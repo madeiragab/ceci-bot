@@ -49,6 +49,12 @@
   à borda: 4/6/7 têm o corte da tela no desenho; 3 e 5 (só o livro) ficam onde a mão o pega no quadro 6
   (−54/−50 px na arte original, convertidos pela escala da folha no build_manifest).
 
+- Saída: folha 21 entrou na paleta única (cabelo estava mais vermelho; roupa fica sem ajuste porque
+  metade dos quadros é só o livro/mão). Quadros com deslocamento (andar/correr) sem dissolve, para não
+  deixar "fantasma" arrastando atrás dela.
+- Publicado: https://github.com/madeiragab/ceci-bot (público), release v0.1.0 com `CeciBot-windows.zip`.
+  Sem licença definida (todos os direitos reservados).
+
 ## Testado de verdade
 - `tests/quit_test.py`: do meio da tela anda até o canto, sai pelo lado certo (espelhada à esquerda),
   quadros 4/6/7 colados na borda (±1,5 px) e o app só fecha no fim — dos dois lados.
