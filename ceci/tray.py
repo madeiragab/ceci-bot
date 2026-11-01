@@ -21,6 +21,7 @@ def build_menu(app, tray=False):
             size.addAction(t, lambda v=v: app.set_size(v))
     if getattr(app, "sala", None):
         m.addSeparator()
+        m.addAction("Olhar minha tela (Ctrl+Alt+C)", app.look_screen)
         m.addAction("Minhas atividades", app.tell_activities)
         m.addAction("Resumo da faculdade", app.tell_summary)
         m.addAction("Conferir Sala Virtual agora", app.check_sala)

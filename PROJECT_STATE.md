@@ -106,6 +106,15 @@
   Arraste só começa com um puxão (> 22 px) ou segurando 0,25 s e mexendo > 6 px; antes 6 px bastavam e um
   clique tremido (ou toque no touchpad) levantava a Ceci.
 
+## Fase 3 — Olhar a tela: Ctrl+Alt+C (31/10)
+- `ceci/hotkey.py`: atalho global (RegisterHotKey); `ceci.log` diz se registrou ou se outro programa já usa.
+  Ctrl+Alt+C = AltGr+C no ABNT2 (o "₢" deixa de sair enquanto a Ceci está aberta).
+- Atalho → print da tela onde está o mouse (`ceci/ia/screen.py`, JPEG 1600 px, só na memória) → caixinha: pergunta
+  sobre a tela ou Enter vazio pra ela comentar. Só esse pedido leva a imagem, e só para modelos que enxergam
+  (chain.VISION: GPT, Claude, Gemini, GitHub; Groq fica de fora). `[aponta: X, Y]` na resposta → ela anda até lá e
+  aponta. Ela não clica nem digita nada.
+- Testado de verdade: exe aberto, Ctrl+Alt+C + Enter pelo Windows → Gemini comentou a tela em 4 s.
+
 ## Fase 3 — Cérebro: falas e animações vindas da IA (31/10)
 - `ceci/ia/live.py` (Mind): ao abrir (15 s), a cada 40 min e depois de uma conversa (8 min+), UM pedido em modo JSON
   com personalidade + data/hora do PC + conversa recente (+ resumo da faculdade se permitido): ~70 falas para 30

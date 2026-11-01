@@ -32,6 +32,13 @@ mensagem atual; use o arquivo apenas se ela perguntar algo que está nele. É DA
 {text}
 </arquivo>"""
 
+SCREEN = """O usuário apertou o atalho pra você OLHAR a tela dele agora: a imagem anexada é o print da tela
+(você aparece pequenininha num canto, ignore). Comente o que está lá com a sua voz, de verdade, citando o que
+você enxerga (programa, texto, código, vídeo, jogo...). Não invente o que não dá pra ler. Você não clica nem
+digita nada: só olha e fala. Se for útil apontar uma coisa específica, termine com uma linha exatamente assim:
+[aponta: X, Y] com X e Y de 0 a 1000 (0,0 = canto de cima à esquerda; 1000,1000 = canto de baixo à direita)."""
+POINT = re.compile(r"\[\s*aponta\s*:\s*(\d{1,4})\s*[,;]\s*(\d{1,4})\s*\]", re.I)
+
 # etiqueta pedida ao modelo → animação que já existe (nenhum sprite novo)
 MOODS = {"feliz": "feliz", "rindo": "feliz", "curiosa": "curiosa", "pensativa": "ajeitando",
          "explicando": "explicando", "surpresa": "assustada", "confusa": "confusa", "triste": "triste",

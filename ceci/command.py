@@ -23,6 +23,7 @@ class CommandBox(QLineEdit):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setAttribute(Qt.WA_QuitOnClose, False)  # fechar a caixinha nunca fecha o app
         self.setPlaceholderText("fala comigo…")
+        self.allow_empty = False  # Enter vazio também envia (caixinha da tela: ela comenta sozinha)
         self.setFixedWidth(260)
         self.setStyleSheet("QLineEdit { background: rgba(20, 17, 20, 70); color: #ffffff; border: 1px solid"
                            " rgba(255, 255, 255, 60); border-radius: 9px; padding: 4px 10px;"
@@ -32,7 +33,7 @@ class CommandBox(QLineEdit):
     def _send(self):
         text = self.text().strip()
         self.close()
-        if text:
+        if text or self.allow_empty:
             self.submitted.emit(text)
 
     def keyPressEvent(self, e):

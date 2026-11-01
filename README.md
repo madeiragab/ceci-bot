@@ -94,6 +94,8 @@ A barrinha do clique duplo passa por um roteador: **comando registrado** (ex.: "
 
 **Situação do provedor**: o Gemini Web **não está conectado**. O `robots.txt` do gemini.google.com fecha as páginas do chat para automação e os Termos do Google tratam esse acesso como abuso, então a Ceci não automatiza a página. O núcleo funciona com qualquer provedor que implemente `AIProvider` (`ceci/ia/provider.py`). Sem provedor, os comandos continuam, perguntas sobre atividades são respondidas com os dados locais e a conversa avisa que não há IA conectada.
 
+**Ctrl+Alt+C**: a Ceci olha a sua tela (print só na hora, só pra IA que enxerga imagem) e comenta ou responde o que você perguntar sobre ela. Arraste um **.txt/.md** em cima dela pra ela ler.
+
 ## 🖼️ Galeria
 
 <p align="center">

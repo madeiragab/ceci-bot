@@ -92,7 +92,7 @@ class Assistant(QObject):
             self.ask(pend, self._route(pend), logged=True)
 
     # --- pergunta para a IA ---
-    def ask(self, text, r, logged=False):
+    def ask(self, text, r, logged=False, image=None):
         if self.busy:
             if texts.norm(text) == texts.norm(self.busy):
                 return  # mesma mensagem de novo enquanto espera: não manda duas vezes
@@ -136,6 +136,9 @@ class Assistant(QObject):
             if part:
                 tpl = prompts.FILE if fresh else prompts.FILE_REF
                 prompt.message = tpl.format(name=f["name"], text=part, cut=cut) + "\n\n" + prompt.message
+        if image:  # print da tela (Ctrl+Alt+C): vai só nesta mensagem
+            prompt.image = image
+            prompt.message = prompts.SCREEN + "\n\nO QUE O USUÁRIO DISSE: " + prompt.message
         self.busy, self.retry_text = text, None
         self.job += 1
         meta = {"job": self.job, "text": text, "route": r.kind, "keys": keys, "ctx": ctx, "pkey": pkey}
@@ -168,6 +171,11 @@ class Assistant(QObject):
 
     def _answer(self, meta, raw, complete, session_id, provider=None):
         text, mood = prompts.parse(raw)
+        point = None
+        m = prompts.POINT.search(text)
+        if m:  # [aponta: X, Y] (0–1000 na tela olhada): o App leva ela até lá
+            point = (min(1000, int(m.group(1))) / 1000, min(1000, int(m.group(2))) / 1000)
+            text = prompts.POINT.sub("", text).strip()
         if not text:
             return self._fail(AIError("vazia"), meta["text"], meta["route"])
         balloons, cut = prompts.balloons(text)
@@ -181,7 +189,7 @@ class Assistant(QObject):
         self.conv.remember(session_id=session_id, last_topic=meta["route"], personality_key=meta["pkey"], **keep)
         self.changed.emit()
         self.answered.emit({"text": text, "balloons": balloons, "truncated": cut, "mood": mood,
-                            "anim": self._anim(mood, meta["ctx"], text), "route": meta["route"]})
+                            "anim": self._anim(mood, meta["ctx"], text), "route": meta["route"], "point": point})
 
     def _anim(self, mood, ctx, text=""):
         """Animação pela resposta: dados acadêmicos mandam (prazo urgente / atividade), depois a ação de roleplay
@@ -213,6 +221,15 @@ class Assistant(QObject):
         self.conv.add("ceci", "\n".join(lines), route="local")
         self.changed.emit()
         self.speak.emit(anim, lines)
+
+    # --- tela ---
+    def look(self, image, question=""):
+        """Ctrl+Alt+C: ela olha o print da tela (só esse pedido leva a imagem) e comenta ou responde."""
+        q = question or "Olha minha tela e comenta o que tá rolando aí."
+        self.conv.add("user", "🖥️ " + q, route="tela")
+        self.changed.emit()
+        self.state.emit("atencao")
+        self.ask(q, router.Route("conversa", "", q), logged=True, image=image)
 
     # --- arquivos ---
     def attach(self, path, question=None):

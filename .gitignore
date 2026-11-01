@@ -9,3 +9,6 @@ __pycache__/
 build/
 dist/
 *.spec
+
+# arquivos pessoais na pasta do projeto
+resumo-cecilia-prado.txt

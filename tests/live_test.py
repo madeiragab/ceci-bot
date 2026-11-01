@@ -196,6 +196,23 @@ check("arquivo enorme: vão os trechos que falam da pergunta, dentro do limite",
 part, how = files.excerpt(hay, "me fala o que achou")
 check("arquivo enorme sem pergunta específica: começo e amostras", "trecho 1 de" in part and "amostras" in how)
 check("arquivo pequeno vai inteiro", files.excerpt("curtinho", "x") == ("curtinho", ""))
+# 9. tela (Ctrl+Alt+C)
+wait(lambda: not ai.busy)
+fake2.replies[:] = ["[rindo] 925 e-mails não lidos, porra? KKKKK\n[aponta: 120, 40]"]
+n = len(out)
+ai.look("QUJD", "")
+wait(lambda: len(out) > n)
+p = fake2.calls[-1]
+check("tela: o print vai só nesse pedido, com a instrução de olhar", p.image == "QUJD" and "OLHAR a tela" in p.message)
+check("tela: [aponta: X, Y] vira ponto (0–1) e some do texto",
+      out[-1]["point"] == (0.12, 0.04) and "aponta" not in out[-1]["text"] and "🖥️" in ai.conv.messages[-2]["text"])
+fake2.replies[:] = ["[neutra] Beleza."]
+ai.handle("valeu")
+wait(lambda: len(out) > n + 1)
+check("tela: a mensagem seguinte não leva o print de novo", fake2.calls[-1].image is None)
+from ceci.hotkey import MOD_ALT, MOD_CONTROL, MOD_SHIFT, Hotkey  # noqa: E402
+hk = Hotkey(qa, key="Z", mods=MOD_CONTROL | MOD_ALT | MOD_SHIFT, ident=0xBEEF)  # outra tecla: não briga com a Ceci aberta
+check("atalho global: registra no Windows e solta", hk.ok and (hk.close() or not hk.ok))
 check("etiqueta de humor em qualquer lugar/formato vira animação e some do texto",
       prompts.parse("*[curiosa]* Cecinha?") == ("Cecinha?", "curiosa")
       and prompts.parse("Opa, porra! [feliz]") == ("Opa, porra!", "feliz")

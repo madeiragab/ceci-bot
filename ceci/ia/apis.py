@@ -59,8 +59,9 @@ def turns(prompt):
 class APIProvider(AIProvider):
     """Um modelo de um serviço. A chave vem de keys.py na hora de cada envio."""
 
-    def __init__(self, service, label, url, model, extra=None):
+    def __init__(self, service, label, url, model, extra=None, vision=False):
         self.service, self.label, self.url, self.model = service, label, url, model
+        self.vision = vision  # o modelo enxerga imagem (print da tela)
         self.extra = dict(extra or {})
         self.id = f"{service}/{model}"
         self.name = label
@@ -117,6 +118,10 @@ class OpenAICompat(APIProvider):
                 **self.extra}
         if prompt.json:
             body["response_format"] = {"type": "json_object"}
+        if prompt.image:
+            last = body["messages"][-1]
+            last["content"] = [{"type": "text", "text": last["content"]},
+                               {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + prompt.image}}]
         return body, ({"Authorization": f"Bearer {key}"} if key else {})
 
     def reply(self, d):
@@ -132,6 +137,11 @@ class Claude(APIProvider):
     def request(self, prompt, key):
         body = {"model": self.model, "max_tokens": MAX_OUT, "system": prompt.system, "messages": turns(prompt),
                 **self.extra}
+        if prompt.image:
+            last = body["messages"][-1]
+            last["content"] = [{"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",
+                                                            "data": prompt.image}},
+                               {"type": "text", "text": last["content"]}]
         return body, {"x-api-key": key, "anthropic-version": "2023-06-01"}
 
     def reply(self, d):

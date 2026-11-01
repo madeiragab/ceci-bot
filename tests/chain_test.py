@@ -312,6 +312,32 @@ check("LaTeX: dinheiro (R$ 5 e R$ 10) não vira fórmula", latex.render("R$ 5 e 
 check("balão: fórmula convertida e emoji mantido", prompts.plain(r"Fácil 😂 $x^2$ por $y$") == "Fácil 😂 x² por y")
 check("etiqueta de humor com asteriscos (*[curiosa]*) é lida", prompts.parse("*[curiosa]* Cecinha?") == ("Cecinha?", "curiosa"))
 
+# 16. print da tela: só modelos que enxergam; formato de imagem de cada API
+ch = chain()
+ch.entries[0].vision = False                  # A não enxerga
+ch.entries[1].vision = True                   # B enxerga
+reset(b=[ok("[curiosa] Vi teu VS Code.")])
+ip = Prompt(system="S", message="olha", image="QUJD")
+r = ch.send_message(ip, 10)
+part = seen[0][2]["messages"][-1]["content"]
+check("tela: modelo sem visão fica de fora, o que enxerga responde", paths() == ["/b"] and r.provider == "svc_b/m2")
+check("tela: formato OpenAI (texto + image_url em base64)",
+      part[0] == {"type": "text", "text": "olha"} and part[1]["image_url"]["url"] == "data:image/jpeg;base64,QUJD")
+body, _ = Claude("c", "C", "x", "m").request(ip, "k")
+check("tela: formato Claude (image base64 + texto)", body["messages"][-1]["content"][0]["source"]["data"] == "QUJD")
+ch.entries[1].vision = ch.entries[2].vision = False
+reset()
+try:
+    ch.send_message(ip, 5)
+    kind = None
+except AIError as e:
+    kind, msg = e.kind, str(e)
+check("tela: ninguém enxerga → 'indisponivel' com motivo, nada enviado", kind == "indisponivel" and "imagem" in msg
+      and not seen)
+from ceci.ia.chain import VISION  # noqa: E402
+check("tela: Gemini (com chave) enxerga, Groq não", "gemini/gemini-3.5-flash-lite" in VISION
+      and not any(v.startswith("groq/") for v in VISION))
+
 srv.shutdown()
 print("\n" + ("TUDO OK" if not fails else f"{len(fails)} FALHA(S): {fails}"))
 sys.exit(1 if fails else 0)

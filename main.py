@@ -12,6 +12,7 @@ from PySide6.QtWidgets import QApplication, QSystemTrayIcon
 from ceci.behavior import Behavior
 from ceci.command import HELP, CommandBox
 from ceci.ia import make_provider
+from ceci.hotkey import Hotkey
 from ceci.ia.live import Mind
 from ceci.ia.assistant import Assistant
 from ceci.ia.chat import ChatWindow
@@ -72,10 +73,13 @@ class App:
         self.sala.alerts.connect(self._sala_alerts)
         self.ai = Assistant(make_provider(self.s["ai_provider"], self.s["ai_chain"]), self.sala.store, self.s, clock=self.sala.now)
         self.ai.state.connect(self._ai_state)
-        self.ai.answered.connect(lambda a: self._say(a["anim"], a["balloons"]))
+        self.ai.answered.connect(self._answered)
         self.ai.failed.connect(lambda f: self._say(f["anim"], f["say"]))
         self.ai.speak.connect(self._say)
         self.ai.local.connect(self.run_local)
+        self.shot = self.screen_geom = None
+        self.hotkey = Hotkey(qapp)
+        self.hotkey.pressed.connect(self.look_screen)
         self._log_start()
         # cérebro: falas soltas e vontades vindas da IA (outra corrente, mesmas pausas de limite)
         mp = make_provider(self.s["ai_provider"], self.s["ai_chain"])
@@ -101,7 +105,8 @@ class App:
         try:
             with open(os.path.join(CONFIG_DIR, "ceci.log"), "a", encoding="utf8") as f:
                 f.write(f"{time.strftime('%d/%m %H:%M:%S')} abriu | pasta {CONFIG_DIR} | chaves {sorted(keys.load())} | "
-                        f"mensagens {len(self.ai.conv.messages)} | IA {self.ai.provider.is_available()}\n")
+                        f"mensagens {len(self.ai.conv.messages)} | IA {self.ai.provider.is_available()} | "
+                        f"Ctrl+Alt+C {'ok' if self.hotkey.ok else 'ocupado por outro programa'}\n")
         except OSError:
             pass
 
@@ -204,6 +209,42 @@ class App:
         box.submitted.connect(self.command)
         box.destroyed.connect(lambda *_: self.box is box and setattr(self, "box", None))
         box.show_beside(self.win.foot, self.win.sprites.scale, self.win.area())
+
+    def _answered(self, a):
+        if a.get("point") and self.screen_geom is not None:
+            return self._point(a["point"], a["balloons"])
+        self._say(a["anim"], a["balloons"])
+
+    def _point(self, pt, lines):
+        """Resposta sobre a tela com [aponta]: anda até embaixo da coisa e aponta enquanto fala."""
+        w, g = self.win, self.screen_geom
+        x = g.left() + pt[0] * g.width()
+        if not w.isVisible() or w.player.paused or w.exiting or w.dragging:
+            return self._say(None, lines)
+        a, s = w.area(), w.sprites.scale
+        x = max(a.left() + 90 * s, min(a.right() - 90 * s, x))
+        self.speech.say_many(lines)
+        if abs(x - w.foot.x()) < 40 * s:
+            self.speech.muted = "apontando"
+            return w.play("apontando", force=True)
+        w.walk_to(x, on_done=lambda: (setattr(self.speech, "muted", "apontando"), w.play("apontando", force=True)))
+
+    def look_screen(self):
+        """Ctrl+Alt+C: print da tela (antes da caixinha aparecer) e caixinha pra perguntar; Enter vazio = comenta."""
+        from ceci.ia import screen
+        if self.win.exiting:
+            return
+        self.beh.user_activity()
+        self.shot, self.screen_geom = screen.grab()
+        if self.box:
+            self.box.close()
+        box = self.box = CommandBox()
+        box.allow_empty = True
+        box.setPlaceholderText("pergunta da tela (Enter = ela comenta)")
+        box.submitted.connect(lambda t: self.ai.look(self.shot, t))
+        box.destroyed.connect(lambda *_: self.box is box and setattr(self, "box", None))
+        box.show_beside(self.win.foot, self.win.sprites.scale, self.win.area())
+        self.speech.say("sv_info", 3, force=True, text="Tô olhando, pergunta aí. Enter vazio que eu comento.")
 
     def drop_files(self, paths):
         """Arquivo solto em cima dela: ela lê (só .txt e .md) e comenta."""
@@ -443,6 +484,7 @@ class App:
         self.fs_timer.stop()
         self.sala.shutdown()
         self.ai.close()
+        self.hotkey.close()
         w.player.set_paused(False)
         w.eyes_off()
         w.save_pos()

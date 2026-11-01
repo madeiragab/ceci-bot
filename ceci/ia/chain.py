@@ -35,6 +35,9 @@ SERVICES = {
                    {"max_tokens": MAX_OUT}, "openrouter.ai/keys"),
 }
 # (serviço, modelo, corpo extra). No Groq e no Gemini cada modelo tem a própria cota diária.
+# Modelos que enxergam imagem (print da tela, Ctrl+Alt+C); os outros ficam de fora desses pedidos.
+VISION = {"openai/gpt-5-mini", "anthropic/claude-haiku-5-5", "gemini/gemini-3.5-flash-lite", "gemini/gemini-2.5-flash",
+          "github/openai/gpt-4.1-mini"}
 CHAIN = [
     ("openai", "gpt-5-mini", {"reasoning_effort": "minimal"}),
     ("anthropic", "claude-haiku-5-5", {}),
@@ -64,7 +67,7 @@ def build(spec=None):
     out = []
     for service, model, extra in entries:
         label, cls, url, body, _ = SERVICES[service]
-        out.append(cls(service, label, url, model, {**body, **extra}))
+        out.append(cls(service, label, url, model, {**body, **extra}, vision=f"{service}/{model}" in VISION))
     return out
 
 
@@ -107,7 +110,7 @@ class ChainProvider(AIProvider):
         end = self.now() + timeout
         errors = []
         for p in self.entries:
-            if not p.is_available()[0]:
+            if not p.is_available()[0] or (prompt.image and not getattr(p, "vision", False)):
                 continue
             until, err = self.paused.get(p.id, (0, None))
             if until > self.now():
@@ -133,7 +136,8 @@ class ChainProvider(AIProvider):
             self.last = r.provider = p.id
             return r
         if not errors:
-            raise AIError("indisponivel", self.is_available()[1])
+            raise AIError("indisponivel", "nenhuma IA que enxerga imagem tem chave" if prompt.image
+                          else self.is_available()[1])
         kinds = [e.kind for e in errors]
         worst = next(k for k in WORST + (kinds[0],) if k in kinds)
         e = next(e for e in errors if e.kind == worst)
