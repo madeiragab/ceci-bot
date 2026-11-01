@@ -106,6 +106,77 @@
   Arraste só começa com um puxão (> 22 px) ou segurando 0,25 s e mexendo > 6 px; antes 6 px bastavam e um
   clique tremido (ou toque no touchpad) levantava a Ceci.
 
+## Sentar nos botões da página e personalidade em todos os PCs (01/11)
+
+- `ceci/page.py`: lê, só lendo, os itens visíveis da página do navegador da frente (botões, imagens, campos,
+  links, abas, itens de lista) pelo UI Automation do Windows (comtypes), numa thread, a cada 0,8 s. Guarda só tipo,
+  nome e retângulo, em memória; nada vai pro disco nem pra IA; nunca clica, foca ou digita. As bordas de cima dos
+  itens viram superfícies (`Surface.el`): ela sobe sozinha (70% das vezes prefere um item), pousa neles ao cair,
+  segue quando a página rola e cai quando o item some ou outra janela tapa. Funciona com o navegador maximizado.
+  Desliga junto com "Sentar nas janelas". Medido no exe: ~80 ms por leitura; 0,22% de CPU e 130 MB de RAM.
+  ceci.log registra se a leitura funcionou e quantos itens (sem nomes). Teste: tests/page_test.py.
+- `ceci/shared.py` + `settings.SHARED_DIR`: personalidade editada (ceci_personality.txt) e humor/falas da IA
+  (mente_ia.json) ficam em OneDrive\Ceci Bot (memoria), iguais em todos os PCs; na 1ª vez migra os deste PC
+  (vale o mais novo; o antigo vira .migrado). A conversa fica em cada PC (PC novo começa do zero); chaves e
+  sessão da Sala Virtual também (DPAPI não abre em outro PC). Teste: tests/shared_test.py.
+
+## Humor nas interações (01/11)
+
+- `ceci/mood.py`: clique, carinho e Interagir escolhem a reação pelo humor, só com animações que já existem
+  (carinho: carinho/feliz/apaixonada/fofa; clique: feliz/acenando/fofa/coracao/beijinho/apaixonada/confusa) e
+  voltam pro idle. Brava (fala da categoria "brava") com 4+ interações em 60 s (6+: quase sempre), interrompendo
+  algo (lendo, café, programando...) ou até 20 s depois de ser acordada. Dormindo, o clique só acorda.
+  Em cima do vídeo flutuante a reação é ficar sentada. Testes: tests/mood_test.py, tests/interact_test.py.
+
+## Fase 3 — Tela refeita: sem print velho, sentar nas janelas, espiar o navegador (31/10)
+- Causa achada na conversa salva (não era só imagem): `files.excerpt` comparava pedaço de palavra ("boa" e "olha"
+  dentro do texto), então "Boa noite ceci" e "olha que lindinha" mandavam a biografia inteira de novo; e o que ela
+  disse dos prints antigos ficava no histórico como se fosse atual. Agora:
+  - `files.relevant`: o arquivo só volta para uma pergunta/pedido de verdade com palavra inteira (≥ 4 letras) que
+    está nele, ou quando a mensagem cita o arquivo ("arquivo", "texto", "resumo"...).
+  - `context.recent`: pedido de print vira "[às HH:MM mandei um print; é velho]"; comentário dela vira "[o que
+    você viu no print das HH:MM; velho]"; com print novo indo agora, os comentários dos velhos saem do contexto
+    (inclusive da conversa em markdown que vai quando troca de IA). A resposta sobre a tela fica com rota "tela".
+  - `prompts.SCREEN`: "PRINT NOVO, tirado agora (hora), janela em foco: título"; nota copiada pela IA some (NOTE).
+  - Mensagem normal que pede pra olhar ("olha isso aqui", "tá vendo esse erro?") tira um print na hora
+    (`prompts.SCREEN_ASK` → `App._look_now`), em vez de ela responder com a descrição de um print antigo.
+- `ceci/desktop.py` (só leitura, Win32): janela da frente (título, programa, navegador?), janelas em ordem Z sem
+  minimizadas/cloaked/de ferramenta/da própria Ceci, retângulo sem a borda invisível, e os pedaços livres da borda
+  de cima de cada janela (nenhuma janela acima cobrindo). Medido: `surfaces()` 0,3 ms, `rect_of()` 0,02 ms.
+- Sentar nas janelas (opção "Sentar nas janelas", ligada): solta no ar → cai até a borda de uma janela embaixo
+  dela (ou o chão); sozinha ela anda até perto e pula (arco com gravidade, pose de queda da arrastada, pouso
+  suave) para a borda de uma janela à vista, de preferência a da frente; lá em cima anda só dentro da borda, senta
+  com as pernas balançando ("borda" pesa 4x), e depois de um tempo pula para o chão. A cada 50 ms acompanha a
+  janela quando você arrasta; cai (fala "caiu") quando ela fecha, minimiza, maximiza, sobe demais ou outra janela
+  cobre a borda (conferido a cada 0,6 s). Esconder/sair pela parede não roda lá em cima; fechar e "mover para o
+  canto" descem antes. Nenhum teleporte.
+- `ceci/watch.py` — "Espiar a tela sozinha" (ligada; desliga no menu): olha o título da janela da frente a
+  cada 1 s; parou 5 s numa aba nova do navegador → print da tela daquele navegador → comentário curto (1-2 frases)
+  por uma corrente separada (a do cérebro), sem travar a conversa. No máximo uma espiada a cada 3 min, a mesma aba
+  só depois de 30 min, nada nos primeiros 45 s. Fica de fora: aba anônima, senha/login, banco/pix/fatura,
+  e-mail, WhatsApp/Telegram/mensagens, página em branco. Falha, limite ou "[nada]" ficam quietos; mensagem sua
+  no meio descarta a espiada. Só lê o título (nada de endereço, histórico ou cookies); o print fica só na memória.
+- Vídeo flutuante (picture-in-picture) e qualquer programa (01/11, pedido do usuário): o vídeo flutuante do Brave
+  fica com o topo a 64 px da borda da tela, e em pé ela precisa de ~86 px (tamanho mínimo). Agora vale borda com
+  espaço só pra ficar sentada (`SIT_ROOM`): lá em cima ela fica só sentada ("borda") e depois de um tempo desce.
+  Pulo liberado até a altura da tela (o vídeo estava a 656 px do chão). Testado no vídeo flutuante de verdade:
+  pulou, pousou em y=64 e sentou. A espiada agora vale para trocar de janela em qualquer programa do PC, não só
+  aba do navegador; ficam de fora apps de conversa, e-mail e gerenciador de senha (`watch.APPS`).
+- Login da Sala Virtual no navegador padrão do Windows (01/11): `login.default_browser()` lê no registro o
+  programa que abre links https; se for Chromium (Brave, Chrome, Edge, Vivaldi, Opera...) o Playwright abre esse
+  executável com perfil temporário; Firefox e outros caem no Edge. Neste PC o padrão registrado é o Edge
+  (MSEdgeHTM). Brave pelo Playwright testado (abre e fecha). Links (atividade, toast) já abriam no padrão.
+- Pedido de ação (`ceci/ia/actions.py`): "então dorme, linda" não fazia nada (o roteador só aceita a frase exata
+  "dorme"). Agora o pedido é comparado com as ações que ela já tem (dormir, acordar, café, ler, ler sentada,
+  gato, acenar, comemorar/dançar, programar, espreguiçar, esconder, sentar, subir na janela, descer, passear):
+  a lista vai na personalidade e a IA marca `[faz: nome]` no fim; sem marca, vale o pedido curto do usuário se
+  ela não recusou ("nem fodendo"); com a IA fora do ar ela faz mesmo assim. O App faz de verdade com a animação
+  ou o movimento que existe; a cena segue o tempo dela. Subir sem janela livre: ela avisa em vez de fingir.
+  `tests/actions_test.py`.
+- Testes: `tests/screen_test.py` (arquivo, contexto, pedido de tela, espiada, olho no navegador),
+  `tests/perch_test.py` (de verdade: janelas de outro processo — pousa, segue, cai, pula, coberta, rotina),
+  `tests/desktop_test.py` (intervalos da borda, DPI, janelas reais).
+
 ## Fase 3 — Olhar a tela: Ctrl+Alt+C (31/10)
 - `ceci/hotkey.py`: atalho global (RegisterHotKey); `ceci.log` diz se registrou ou se outro programa já usa.
   Ctrl+Alt+C = AltGr+C no ABNT2 (o "₢" deixa de sair enquanto a Ceci está aberta).
@@ -321,7 +392,10 @@
 
 - 31/10 (2ª rodada): idle novo `assetsoriginal/idle.png` (folha 57, respira e pisca) virou o idle
   principal; folha 56 (olhar para baixo) entrou no seguir_mouse (baixo-esq., baixo, baixo-dir.);
-  seguir o mouse só começa com o cursor rápido (> 1800 px/s) e para após 2 s de mouse parado;
+  seguir o mouse só começa com o cursor rápido (> 1800 px/s); depois de começar acompanha o mouse perto ou longe
+  enquanto ele mexer (até devagar) e só volta ao idle 1 a 3 s (sorteado) depois que ele para; no ar ou sentada no
+  teto baixo (vídeo flutuante) não olha em pé; lá em cima fica sentada direto e desce sozinha em 2 a 5 min
+  (tests/eyes_test.py, 01/11);
   folha 3 corrigida pela altura do corpo (estava 12 % maior; agora 333 px = idle); sentada
   balançando (51) com rosto travado nos quadros 2–7. Testes 4/4, 5/5, smoke ok. Medido: CPU 0,20 %
   do total, 57 MB working set, 28 MB privado, 0 TCP.

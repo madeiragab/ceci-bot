@@ -1,7 +1,8 @@
 """Conversa da Ceci: histórico completo (para a janela do chat) + contexto compacto (para o modelo).
 
-Guardado em %APPDATA%\\Ceci Bot\\conversa.json. Fechar a janela do chat ou o navegador não apaga nada;
-só "Apagar histórico" apaga. Para o modelo vão só as últimas mensagens, encurtadas.
+Guardado em %APPDATA%\\Ceci Bot\\conversa.json (só neste PC: em PC novo a conversa começa do zero; a
+personalidade é que vale em todos, ceci/shared.py). Fechar a janela do chat ou o navegador não apaga
+nada; só "Apagar histórico" apaga. Para o modelo vão só as últimas mensagens, encurtadas.
 """
 import json
 import os
@@ -44,8 +45,10 @@ class Conversation:
         self.save()
         return m
 
-    def recent(self, n=RECENT, chars=RECENT_CHARS):
-        """Últimas trocas da conversa atual, curtas, sem mensagens de erro (o que o modelo precisa para seguir)."""
+    def recent(self, n=RECENT, chars=RECENT_CHARS, new_shot=False):
+        """Últimas trocas da conversa atual, curtas, sem mensagens de erro (o que o modelo precisa para seguir).
+        Prints da tela ficam marcados como velhos (com a hora); new_shot (vai um print novo agora): o que ela
+        disse dos prints antigos sai, para não misturar com a tela de agora."""
         out = []
         for m in reversed(self.messages):
             if m["role"] == "sistema":
@@ -54,7 +57,15 @@ class Conversation:
                 continue
             t = m["text"]
             if m.get("route") == "tela":  # o print foi só naquela mensagem: o modelo precisa saber que não tem mais
-                t = "[nesta mensagem mandei um print da tela; você não está mais vendo ele] " + t.replace("🖥️", "").strip()
+                at = time.strftime("%H:%M", time.localtime(m["at"]))
+                if m["role"] == "user":
+                    t = f"[às {at} mandei um print da tela; é velho, você não vê mais ele] " + t.replace("🖥️", "").strip()
+                elif new_shot:
+                    continue
+                elif m.get("auto"):
+                    t = f"[às {at} você espiou sozinha a tela ({m.get('window') or 'outra janela'}); print velho] " + t
+                else:
+                    t = f"[o que você viu no print das {at}; velho, a tela já mudou] " + t
             elif m.get("route") == "arquivo":
                 t = "[mandei o arquivo " + t.replace("📄", "").strip() + "]"
             t = t if len(t) <= chars else t[:chars - 1] + "…"

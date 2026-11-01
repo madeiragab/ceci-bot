@@ -1,4 +1,4 @@
-"""Print da tela para a Ceci olhar (só quando você aperta o atalho; nada vai para o disco)."""
+"""Print da tela para a Ceci olhar (atalho, pedido seu ou espiada no navegador; nada vai para o disco)."""
 import base64
 
 from PySide6.QtCore import QBuffer, QByteArray, QIODevice, Qt
@@ -8,9 +8,9 @@ MAX_W = 1600   # largura do print que vai para a IA (dá pra ler texto sem pesar
 QUALITY = 75
 
 
-def grab():
-    """(JPEG em base64, geometria da tela capturada) da tela onde está o mouse."""
-    scr = QGuiApplication.screenAt(QCursor.pos()) or QGuiApplication.primaryScreen()
+def grab(at=None):
+    """(JPEG em base64, geometria da tela capturada) da tela onde está o ponto at (padrão: o mouse)."""
+    scr = QGuiApplication.screenAt(at or QCursor.pos()) or QGuiApplication.primaryScreen()
     img = scr.grabWindow(0).toImage()
     if img.width() > MAX_W:
         img = img.scaledToWidth(MAX_W, Qt.SmoothTransformation)

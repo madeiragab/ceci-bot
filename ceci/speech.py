@@ -51,7 +51,7 @@ REACT = {
     "acenando": ("chamando", 0.0, 2),  # chance 0: só quando pedida (menu Interagir, painel)
     "carinho": ("carinho", 1.0, 0), "arrastada": ("arrastada", 1.0, 0),
 }
-PRIO = {"arrastada": 4, "girando": 4, "solta": 4, "tonta": 4, "saida": 5}  # interações valem 3; automáticas, 1; tchau fura a fila
+PRIO = {"arrastada": 4, "girando": 4, "solta": 4, "tonta": 4, "caiu": 4, "saida": 5}  # interações valem 3; automáticas, 1; tchau fura a fila
 QUEUE_MAX = 3
 AUTO_GAP = 18.0  # s mínimos entre falas automáticas
 CHAT = (45, 110)  # s entre comentários soltos quando está parada
@@ -380,7 +380,8 @@ class Speech(QObject):
             forced = self.win.talk_aid == p.aid
             self.win.talk_aid = None
             self.pending = None
-            r = REACT.get(p.aid) if self.muted != p.aid else None  # quem pediu a animação já fala por ela
+            # quem pediu a animação já fala por ela; a pose de queda no pulo/queda não é "tá sendo arrastada"
+            r = REACT.get(p.aid) if self.muted != p.aid and (p.aid != "arrastada" or self.win.dragging) else None
             self.muted = None
             if r and (forced or self._auto_ok(r[1])):
                 a = p.current
@@ -398,6 +399,10 @@ class Speech(QObject):
         if kind == "olhando":
             if self._auto_ok(0.35):
                 self.say("curiosa")
+            return
+        if kind == "janela":  # subiu numa janela: às vezes comenta
+            if self._auto_ok(0.6):
+                self.say("janela")
             return
         self.say(kind, PRIO.get(kind, 3), force=True)
 

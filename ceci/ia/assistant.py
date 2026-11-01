@@ -8,7 +8,7 @@ import time
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from ..sala import texts
-from . import academic, files, live, prompts, router
+from . import academic, actions, files, live, prompts, router
 from .context import Conversation
 from .personality import Personality
 from .provider import AIError
@@ -35,6 +35,7 @@ class Assistant(QObject):
     local = Signal(str, str)   # comando local que o App executa: (ação, resto)
     changed = Signal()         # histórico mudou (janela do chat)
     _done = Signal(object)     # thread de trabalho → thread da interface
+    _peeked = Signal(object)   # espiada sozinha terminou (thread → interface)
 
     def __init__(self, provider, store, settings, conv=None, personality=None, clock=time.time, timeout=90):
         super().__init__()
@@ -48,8 +49,10 @@ class Assistant(QObject):
         self.consent_pending = None  # pergunta acadêmica esperando "sim" para mandar os dados
         self.files = {}              # caminho → texto inteiro dos arquivos entregues (só na memória)
         self.fresh_file = False      # o próximo envio é a entrega do arquivo (depois ele vai só como consulta)
+        self.peeking = False         # espiada sozinha (troca de aba) esperando a IA
         self.watchdog = QTimer(self, singleShot=True, timeout=self._expired)
         self._done.connect(self._finish)
+        self._peeked.connect(self._peek_done)
 
     # --- entrada ---
     def handle(self, text):
@@ -92,7 +95,7 @@ class Assistant(QObject):
             self.ask(pend, self._route(pend), logged=True)
 
     # --- pergunta para a IA ---
-    def ask(self, text, r, logged=False, image=None):
+    def ask(self, text, r, logged=False, image=None, where=""):
         if self.busy:
             if texts.norm(text) == texts.norm(self.busy):
                 return  # mesma mensagem de novo enquanto espera: não manda duas vezes
@@ -120,10 +123,11 @@ class Assistant(QObject):
             return self._fail(AIError("falha", "ceci_personality.txt não encontrado"), text, r.kind)
         pkey = list(self.persona.key)
         new = self.conv.state["session_id"] is None or self.conv.state["personality_key"] != pkey
-        history = self.conv.recent()[:-1]  # a mensagem atual vai em prompt.message
+        history = self.conv.recent(new_shot=bool(image))[:-1]  # a mensagem atual vai em prompt.message
         prompt = prompts.build(system, history, text, ctx, new, self.conv.state["session_id"])
         # se outra IA assumir, ela recebe a conversa inteira em markdown (ChainProvider decide)
-        prompt.transcript = prompts.markdown(self.conv.recent(prompts.TRANSCRIPT, prompts.TRANSCRIPT_CHARS)[:-1])
+        prompt.transcript = prompts.markdown(
+            self.conv.recent(prompts.TRANSCRIPT, prompts.TRANSCRIPT_CHARS, new_shot=bool(image))[:-1])
         prompt.last_provider = self.conv.state["provider"]
         f = self.conv.state.get("file")
         body = self._file_text(f) if f else None
@@ -136,9 +140,10 @@ class Assistant(QObject):
             if part:
                 tpl = prompts.FILE if fresh else prompts.FILE_REF
                 prompt.message = tpl.format(name=f["name"], text=part, cut=cut) + "\n\n" + prompt.message
-        if image:  # print da tela (Ctrl+Alt+C): vai só nesta mensagem
+        if image:  # print da tela tirado agora: vai só nesta mensagem
             prompt.image = image
-            prompt.message = prompts.SCREEN + "\n\nO QUE O USUÁRIO DISSE: " + prompt.message
+            prompt.message = (prompts.SCREEN.format(when=self._clock(), where=f', janela em foco: "{where}"' if where
+                                                    else "") + "\n\nO QUE O USUÁRIO DISSE: " + prompt.message)
         self.busy, self.retry_text = text, None
         self.job += 1
         meta = {"job": self.job, "text": text, "route": r.kind, "keys": keys, "ctx": ctx, "pkey": pkey}
@@ -170,12 +175,7 @@ class Assistant(QObject):
         self._answer(meta, reply.text, reply.complete, reply.session_id, reply.provider)
 
     def _answer(self, meta, raw, complete, session_id, provider=None):
-        text, mood = prompts.parse(raw)
-        point = None
-        m = prompts.POINT.search(text)
-        if m:  # [aponta: X, Y] (0–1000 na tela olhada): o App leva ela até lá
-            point = (min(1000, int(m.group(1))) / 1000, min(1000, int(m.group(2))) / 1000)
-            text = prompts.POINT.sub("", text).strip()
+        text, mood, point, act = self._read(raw, meta["text"] if meta["route"] == "conversa" else "")
         if not text:
             return self._fail(AIError("vazia"), meta["text"], meta["route"])
         balloons, cut = prompts.balloons(text)
@@ -189,7 +189,24 @@ class Assistant(QObject):
         self.conv.remember(session_id=session_id, last_topic=meta["route"], personality_key=meta["pkey"], **keep)
         self.changed.emit()
         self.answered.emit({"text": text, "balloons": balloons, "truncated": cut, "mood": mood,
-                            "anim": self._anim(mood, meta["ctx"], text), "route": meta["route"], "point": point})
+                            "anim": self._anim(mood, meta["ctx"], text), "route": meta["route"], "point": point,
+                            "action": act})
+
+    @staticmethod
+    def _read(raw, user_text=""):
+        """Resposta crua → (texto, humor, ponto, ação). [aponta: X, Y] (0–1000 na tela olhada): o App leva ela até
+        lá. [faz: nome] (ou, sem marca, o pedido do usuário que bate com uma ação dela): o App faz de verdade."""
+        text, mood = prompts.parse(raw)
+        text, act = actions.from_reply(prompts.NOTE.sub("", text), user_text, mood)
+        point = None
+        m = prompts.POINT.search(text)
+        if m:
+            point = (min(1000, int(m.group(1))) / 1000, min(1000, int(m.group(2))) / 1000)
+            text = prompts.POINT.sub("", text).strip()
+        return text, mood, point, act
+
+    def _clock(self):
+        return time.strftime("%H:%M:%S", time.localtime(self.now()))
 
     def _anim(self, mood, ctx, text=""):
         """Animação pela resposta: dados acadêmicos mandam (prazo urgente / atividade), depois a ação de roleplay
@@ -208,7 +225,9 @@ class Assistant(QObject):
         self.changed.emit()
         self.failed.emit({"kind": err.kind, "say": [say], "detail": str(err),
                           "anim": "confusa" if err.kind == "indisponivel" else "negando"
-                          if err.kind == "cancelada" else "erro"})
+                          if err.kind == "cancelada" else "erro",
+                          # pediu uma ação dela e a IA falhou: ela faz mesmo assim (é animação, não precisa de IA)
+                          "action": actions.wanted(text) if route == "conversa" and err.kind != "cancelada" else None})
 
     def _local_answer(self, r):
         kind = academic.intent(r.rest)
@@ -223,13 +242,53 @@ class Assistant(QObject):
         self.speak.emit(anim, lines)
 
     # --- tela ---
-    def look(self, image, question=""):
-        """Ctrl+Alt+C: ela olha o print da tela (só esse pedido leva a imagem) e comenta ou responde."""
+    def look(self, image, question="", where=""):
+        """Ela olha um print tirado agora (Ctrl+Alt+C ou "olha minha tela"): só esse pedido leva a imagem, e o
+        que ela responder fica marcado como tela (vira "print velho" no contexto das próximas)."""
         q = question or "Olha minha tela e comenta o que tá rolando aí."
-        self.conv.add("user", "🖥️ " + q, route="tela")
+        self.conv.add("user", "🖥️ " + q, route="tela", window=where)
         self.changed.emit()
         self.state.emit("atencao")
-        self.ask(q, router.Route("conversa", "", q), logged=True, image=image)
+        self.ask(q, router.Route("tela", "", q), logged=True, image=image, where=where)
+
+    def peek(self, image, where, provider=None):
+        """Espiada sozinha (você trocou de aba no navegador): comentário curto sem travar a conversa. Falha,
+        limite ou "[nada]" ficam quietos; mensagem sua no meio do caminho descarta a espiada."""
+        if self.busy or self.peeking:
+            return False
+        try:
+            system = self.persona.instructions() + f"\n\nAGORA (data e hora do PC): {live.now_text(self.now())}"
+        except OSError:
+            return False
+        prompt = prompts.build(system, self.conv.recent(8, 300, new_shot=True),
+                               prompts.PEEK.format(where=where, when=self._clock()))
+        prompt.image = image
+        provider, job = provider or self.provider, self.job
+        self.peeking = True
+
+        def work():
+            try:
+                r = provider.send_message(prompt, 40)
+                self._peeked.emit((job, where, r.text, r.provider))
+            except Exception:  # limite, rede, sem IA que enxerga: espiada é opcional, fica quieta
+                self._peeked.emit((job, where, None, None))
+        threading.Thread(target=work, daemon=True).start()
+        return True
+
+    def _peek_done(self, res):
+        job, where, raw, provider = res
+        self.peeking = False
+        if not (raw or "").strip() or job != self.job or self.busy or prompts.NOTHING.match(raw):
+            return
+        text, mood, point, act = self._read(raw)
+        if not text or prompts.NOTHING.match(text):
+            return
+        balloons, cut = prompts.balloons(text)
+        self.conv.add("ceci", text, route="tela", auto=True, window=where, mood=mood, provider=provider)
+        self.changed.emit()
+        self.answered.emit({"text": text, "balloons": balloons[:2], "truncated": cut, "mood": mood,
+                            "anim": self._anim(mood, None, text), "route": "tela", "point": point, "auto": True,
+                            "action": act})
 
     # --- arquivos ---
     def attach(self, path, question=None):

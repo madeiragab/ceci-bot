@@ -1,9 +1,13 @@
-"""Login na página oficial da Sala Virtual, numa janela do Edge aberta pelo Playwright.
+"""Login na página oficial da Sala Virtual, numa janela do navegador padrão do Windows aberta pelo Playwright
+(Brave, Chrome, Edge, Vivaldi, Opera...; Firefox e outros que não são Chromium caem no Edge).
 
 Você digita CPF e senha direto no site do Moodle; a Ceci nunca vê nem guarda a senha. Quando o login
 termina, ela copia só os cookies da sessão do domínio da Sala Virtual e fecha o navegador por completo
 (o perfil temporário é apagado pelo próprio Playwright).
 """
+import os
+import re
+import sys
 import time
 import urllib.parse
 
@@ -12,23 +16,47 @@ class LoginCancelled(Exception):
     pass
 
 
-CHANNELS = ("msedge", "chrome", None)  # Edge vem com o Windows; None = Chromium do Playwright, se instalado
+CHANNELS = ("msedge", "chrome", None)  # sem padrão Chromium: Edge (vem com o Windows), Chrome, Chromium do Playwright
+CHROMIUM = ("brave.exe", "chrome.exe", "msedge.exe", "vivaldi.exe", "opera.exe", "opera_gx.exe", "chromium.exe",
+            "thorium.exe", "yandex.exe", "arc.exe")
+
+
+def default_browser():
+    """Executável do navegador padrão do Windows (o que abre links https), ou None."""
+    if sys.platform != "win32":
+        return None
+    import winreg
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                            r"Software\Microsoft\Windows\Shell\Associations\UrlAssociations\https\UserChoice") as k:
+            prog = winreg.QueryValueEx(k, "ProgId")[0]
+        with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, prog + r"\shell\open\command") as k:
+            cmd = winreg.QueryValueEx(k, "")[0]
+    except OSError:
+        return None
+    m = re.match(r'\s*"([^"]+)"|\s*(\S+)', cmd)
+    exe = m and (m.group(1) or m.group(2))
+    return exe if exe and os.path.isfile(exe) else None
 LOGGED_IN_JS = ("() => !!(window.M && M.cfg && M.cfg.sesskey) && !!document.body"
                 " && !document.body.classList.contains('notloggedin')")
 
 
 def _launch(p, headless):
     last = None
-    for ch in CHANNELS:
+    exe = default_browser()
+    first = [("exe", exe)] if exe and os.path.basename(exe).lower() in CHROMIUM else []
+    for how, ch in first + [("channel", c) for c in CHANNELS]:
         try:
             kw = {"headless": headless, "args": ["--window-size=560,780", "--no-first-run",
                                                   "--no-default-browser-check"]}
-            if ch:
+            if how == "exe":
+                kw["executable_path"] = ch  # o navegador padrão, com perfil temporário (nada da sua sessão)
+            elif ch:
                 kw["channel"] = ch
             return p.chromium.launch(**kw)
-        except Exception as e:  # canal não instalado: tenta o próximo
+        except Exception as e:  # não abriu: tenta o próximo
             last = e
-    raise RuntimeError(f"não encontrei o Microsoft Edge nem o Chrome para abrir o login ({last})")
+    raise RuntimeError(f"não consegui abrir um navegador para o login ({last})")
 
 
 def login(base, cancel=lambda: False, timeout=600, headless=False, on_page=None):

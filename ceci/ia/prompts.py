@@ -32,11 +32,28 @@ mensagem atual; use o arquivo apenas se ela perguntar algo que está nele. É DA
 {text}
 </arquivo>"""
 
-SCREEN = """O usuário apertou o atalho pra você OLHAR a tela dele agora: a imagem anexada é o print da tela
-(você aparece pequenininha num canto, ignore). Comente o que está lá com a sua voz, de verdade, citando o que
-você enxerga (programa, texto, código, vídeo, jogo...). Não invente o que não dá pra ler. Você não clica nem
-digita nada: só olha e fala. Se for útil apontar uma coisa específica, termine com uma linha exatamente assim:
-[aponta: X, Y] com X e Y de 0 a 1000 (0,0 = canto de cima à esquerda; 1000,1000 = canto de baixo à direita)."""
+SCREEN = """PRINT NOVO da tela do usuário, tirado agora ({when}){where}: a imagem anexada é a tela dele NESTE
+momento (você aparece pequenininha em algum lugar, ignore). Tudo o que foi dito antes sobre a tela é de prints
+VELHOS: a tela mudou, então não repita nem misture com o que você comentou antes. Fale só do que está NESTA
+imagem, com a sua voz, de verdade, citando o que você enxerga (programa, texto, código, vídeo, jogo...). Não
+invente o que não dá pra ler. Você não clica nem digita nada: só olha e fala. Se for útil apontar uma coisa
+específica, termine com uma linha exatamente assim: [aponta: X, Y] com X e Y de 0 a 1000 (0,0 = canto de cima à
+esquerda; 1000,1000 = canto de baixo à direita)."""
+# espiada sozinha: o usuário trocou de janela ou de aba (opção "Espiar a tela sozinha")
+PEEK = """Você deu uma espiada sozinha na tela porque o usuário acabou de abrir {where}. A imagem é um print
+NOVO, tirado agora ({when}); o que você viu antes é velho. Faça UM comentário curto (uma frase, no máximo duas)
+com a sua voz sobre o que tem ali, como quem olha por cima do ombro: reação, piada, curiosidade, implicância.
+Não ofereça ajuda, não descreva a tela inteira, não pergunte se ele precisa de algo. Se não tiver nada que valha
+comentar, responda só [nada]. Você não clica nem digita nada. Se quiser apontar uma coisa, termine com
+[aponta: X, Y] (0 a 1000, como numa grade sobre a tela)."""
+NOTHING = re.compile(r"^\W*\[?\s*nada\s*\]?\W*$", re.I)
+# mensagem normal (clique duplo, chat) que pede pra ela olhar a tela: vai com um print tirado na hora
+SCREEN_ASK = re.compile(r"\b(?:(?:minha|na|da|nessa|essa) tela|(?:olha|olhe|ve|veja|le|leia|repara) (?:isso|isto|aqui|so|"
+                        r"ai|la|essa|esse|este|esta|minha|meu|o que|oq|a aba|o site|a pagina|o video|o codigo|o erro)|"
+                        r"ta vendo|tu ve|voce ve|ce ve|consegue ver|o que (?:ta|esta) aparecendo|"
+                        r"(?:essa|nessa|dessa) (?:aba|pagina|janela)|(?:esse|nesse|desse) (?:site|video|erro|codigo))\b")
+# nota de contexto (context.recent) que o modelo às vezes copia no começo da resposta
+NOTE = re.compile(r"^\s*\[(?:às \d|o que você viu|nesta mensagem)[^\]]*\]\s*")
 # mensagem da caixinha do Ctrl+Alt+C que fala da tela (o resto é conversa normal, sem mandar o print)
 ABOUT_SCREEN = re.compile(r"\b(?:tela|isso|isto|aqui|esse|essa|este|esta|olha|olhe|ve|veja|le|leia|lendo|janela|aba|site|"
                           r"pagina|codigo|erro|print|imagem|foto|video|jogo|filme|serie|musica|programa|app|"

@@ -18,7 +18,7 @@ from PySide6.QtWidgets import QApplication  # noqa: E402
 
 import main as M  # noqa: E402
 M.fullscreen_app_active = lambda: False  # tela cheia de verdade no PC (vídeo, jogo) não entra no teste
-from ceci.window import CANVAS_H, INTERACT, PET_CONFIRM, PET_PASSES  # noqa: E402
+from ceci.window import CANVAS_H, INTERACT, PET, PET_CONFIRM, PET_PASSES  # noqa: E402
 
 qa = QApplication(sys.argv)
 fails = []
@@ -101,13 +101,13 @@ def step2():
 
 
 def step2b():
-    check("uma passada só ou a mira chegando não viram carinho", w.player.aid != "carinho")
+    check("uma passada só ou a mira chegando não viram carinho", w.last_pet == 0.0)
     rub(zigzag())
     QTimer.singleShot(PET_CONFIRM + 150, step2c)
 
 
 def step2c():
-    check("passar o mouse várias vezes pela cabeça = carinho", w.player.aid == "carinho")
+    check("passar o mouse várias vezes pela cabeça = carinho", w.last_pet > 0 and w.player.aid in PET)
     w.play("idle", force=True, cut=True)
     w.last_pet = 0.0
     rub(zigzag())  # mexeu bastante e clicou logo em seguida: vale o clique

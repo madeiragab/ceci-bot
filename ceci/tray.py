@@ -27,9 +27,13 @@ def build_menu(app, tray=False):
         m.addAction("Conferir Sala Virtual agora", app.check_sala)
         m.addAction("Abrir chat", app.open_chat)
         m.addSeparator()
-    pause = QAction("Pausar animações", m, checkable=True, checked=app.win.player.paused)
-    pause.toggled.connect(app.set_paused)
-    m.addAction(pause)
+    for text, key, on, slot in (("Pausar animações", "pause", app.win.player.paused, app.set_paused),
+                                ("Sentar nas janelas", "perch", app.s["perch"], app.set_perch),
+                                ("Espiar a tela sozinha", "auto_look", app.s["auto_look"], app.set_auto_look)):
+        act = QAction(text, m, checkable=True, checked=bool(on))
+        act.setData(key)
+        act.toggled.connect(slot)
+        m.addAction(act)
     m.addAction("Configurações", app.open_settings)
     if not tray:
         m.addAction("Ocultar", app.hide_ceci)
@@ -53,9 +57,12 @@ class Tray(QSystemTrayIcon):
         self.setContextMenu(self.menu)
 
     def _refresh(self):
+        on = {"pause": self.app.win.player.paused, "perch": self.app.s["perch"], "auto_look": self.app.s["auto_look"]}
         for a in self.menu.actions():
-            if a.isCheckable():
-                a.setChecked(self.app.win.player.paused)
+            if a.isCheckable() and a.data() in on:
+                a.blockSignals(True)
+                a.setChecked(bool(on[a.data()]))
+                a.blockSignals(False)
 
     def _activated(self, reason):
         if reason == QSystemTrayIcon.Trigger:

@@ -9,6 +9,17 @@ ROOT = getattr(sys, "_MEIPASS", "") if FROZEN else os.path.dirname(os.path.dirna
 CONFIG_DIR = os.environ.get("CECI_CONFIG_DIR") or os.path.join(os.environ.get("APPDATA", ROOT), "Ceci Bot")
 PATH = os.path.join(CONFIG_DIR, "settings.json")
 
+
+def _shared_dir():
+    """Pasta da memória que vale em todos os PCs (ceci/shared.py): OneDrive, se tiver; senão a de sempre."""
+    if os.environ.get("CECI_CONFIG_DIR"):  # testes: nunca a pasta real
+        return os.environ.get("CECI_SHARED_DIR") or CONFIG_DIR
+    od = os.environ.get("OneDrive") or os.environ.get("OneDriveConsumer")
+    return os.path.join(od, "Ceci Bot (memoria)") if od and os.path.isdir(od) else CONFIG_DIR
+
+
+SHARED_DIR = _shared_dir()
+
 DEFAULTS = {
     "size": 0.55,            # escala da personagem (1.0 = 340 px de altura)
     "speed": 1.0,            # multiplicador de velocidade das animações
@@ -31,6 +42,8 @@ DEFAULTS = {
     "ai_provider": "corrente",  # provedor da IA (ceci/ia/__init__.py: PROVIDERS)
     "ai_chain": None,        # ordem da corrente: ["serviço/modelo", ...]; None = a padrão (ceci/ia/chain.py)
     "ai_academic": None,     # pode mandar o recorte das atividades para a IA? None = ainda não perguntou
+    "perch": True,           # sobe e senta na borda de cima das janelas abertas (ceci/desktop.py)
+    "auto_look": True,       # espia a tela quando você troca de janela ou de aba (ceci/watch.py); desliga no menu
 }
 
 

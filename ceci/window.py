@@ -2,17 +2,20 @@
 import math
 import random
 import time
+from dataclasses import replace
 
 from PySide6.QtCore import QPoint, QPointF, QRect, Qt, QTimer, Signal
 from PySide6.QtGui import QCursor, QGuiApplication, QPainter
 from PySide6.QtWidgets import QWidget
 
+from . import desktop, mood
 from .engine import Player
 from .sprites import Sprites
 
 CANVAS_W, CANVAS_H, FOOT_MARGIN = 640, 590, 100  # em px de sprite (escala 1.0); margem: pernas na barra
 DRAG_START, DRAG_QUICK, DRAG_HOLD = 6, 22, 0.25  # px parado/segurando; px num clique rápido; s até "segurar"
-INTERACT = ("acenando", "feliz", "beijinho", "coracao", "fofa")  # clique ou menu Interagir
+INTERACT = tuple(mood.HAPPY["clique"]) + ("brava",)  # reações a clique ou menu Interagir (ceci/mood.py)
+PET = tuple(mood.HAPPY["carinho"]) + ("brava",)       # reações a carinho
 PET_PASSES, PET_STROKE, PET_WINDOW = 5, 30, 3.0  # carinho: 5 idas e vindas (≥ 30 px) no MESMO eixo em 3 s
 PET_CONFIRM = 450  # ms: clicou logo depois? era só a mira chegando nela — vale o clique, não o carinho
 SPIN_WINDOW, SPIN_PATH, SPIN_TURN = 1.5, 500, 3 * math.pi  # girada/sacudida: 1,5 volta (ou 3 idas e vindas)
@@ -20,13 +23,18 @@ SPIN_AGAIN = 6.0  # s até poder reclamar de novo se continuar girando
 EYE_HOLD = 1.5       # s mínimos olhando numa direção antes de trocar
 EYE_COOLDOWN = 10.0  # s depois de parar de olhar o mouse até poder começar de novo
 FADE_MS = 420  # troca de animação: desenhos diferentes precisam de um dissolve mais longo
+FALL_G, JUMP_G = 2600, 1900  # px/s²: queda (soltou no ar, a janela sumiu) e pulo (mais leve, dá pra ver o arco)
+MAX_JUMP = 2800   # px de sprite (escala 1.0): até onde ela pula sozinha para cima (dá a tela toda no tamanho mínimo)
+HEADROOM = 345    # px de sprite acima dos pés: o espaço que ela ocupa em pé em cima de uma borda
+SIT_ROOM = 215    # ... e sentada: borda colada no topo da tela (vídeo flutuante) só dá pra ficar sentada
+PERCH_MS, PERCH_CHECK = 50, 0.6  # sentada numa janela: segue ela a cada 50 ms; confere se a borda está livre a cada 0,6 s
 
 
 class CeciWindow(QWidget):
     context_menu = Signal(QPoint)
     became_idle = Signal()
     moved = Signal()
-    interaction = Signal(str)  # clique, carinho, arrastada, girando, solta, tonta, acordando, olhando (falas)
+    interaction = Signal(str)  # clique, carinho, arrastada, girando, solta, tonta, acordando, olhando, caiu, janela
     double_clicked = Signal()  # clique duplo nela: caixinha para digitar
     files_dropped = Signal(list)  # arquivos soltos em cima dela (caminhos)
 
@@ -58,7 +66,16 @@ class CeciWindow(QWidget):
         self.vel = 0.0              # px/s horizontal (caminhada / passos com "mv")
         self.walk_target = None
         self.walk_speed = 0.0
-        self.fall_v = None          # queda após soltar o arraste
+        self.fall_v = None          # velocidade vertical no ar (queda após soltar o arraste, pulo, janela que sumiu)
+        self.air_vx, self.air_g, self.flight = 0.0, FALL_G, None  # no ar: px/s de lado, gravidade, "pulo"/"queda"
+        self.after_land = None      # o que fazer depois de pousar (ex.: descer da janela e ir para o canto)
+        self.perch = None           # borda de cima da janela onde ela está (desktop.Surface); None = no chão
+        self.perch_rect = None      # retângulo da janela na última conferida (para seguir quando você arrasta)
+        self.perch_t = 0.0          # quando subiu (o comportamento decide descer depois de um tempo)
+        self.perch_check = 0.0
+        self.surfaces = []          # bordas onde dá para pousar nesta queda/pulo
+        self.page = None            # itens da página do navegador (ceci/page.py); o App liga
+        self.perch_timer = QTimer(self, timeout=self._perch_tick)
         self.last_move = time.monotonic()
         self.move_timer = QTimer(self, timeout=self._move_tick)
 
@@ -73,6 +90,7 @@ class CeciWindow(QWidget):
                                   interval=QGuiApplication.styleHints().mouseDoubleClickInterval())
         self.eyes_on = False
         self.eyes_idx = None
+        self.mood = mood.Mood()
         self.eyes_last_near = 0.0
         self.eye_timer = QTimer(self, timeout=self._eye_tick)
         self.exiting = False
@@ -124,12 +142,36 @@ class CeciWindow(QWidget):
         return sc.availableGeometry()
 
     def ground(self):
-        return self.area().bottom() + 1
+        return self.perch.y if self.perch else self.area().bottom() + 1
+
+    def span(self):
+        """Onde ela pode andar: a borda da janela em que está, ou a largura da tela."""
+        if self.perch:
+            return self.perch.x0, self.perch.x1
+        a = self.area()
+        return a.left(), a.right()
+
+    def headroom(self):
+        return int(HEADROOM * self.sprites.scale)
+
+    def sit_room(self):
+        return int(SIT_ROOM * self.sprites.scale)
+
+    def low(self):
+        """Em cima de uma janela colada no topo da tela (ex.: vídeo flutuante): em pé a cabeça sairia da tela."""
+        return bool(self.perch) and self.perch.y < self.area().top() + self.headroom()
+
+    def sit_low(self):
+        """Senta e fica sentada (sem voltar a ficar em pé a cada volta da animação, nem olhar o mouse em pé)."""
+        if self.low() and not self.dragging and self.fall_v is None and not self.exiting:
+            self.low_until = time.monotonic() + random.uniform(120, 300)
+            self.play("borda", force=True, loops="inf")
 
     def clamp_x(self, x, margin=None):
-        a = self.area()
-        m = 45 * self.sprites.scale if margin is None else margin
-        return min(max(x, a.left() + m), a.right() - m)
+        left, right = self.span()
+        m = (40 if self.perch else 45) * self.sprites.scale if margin is None else margin
+        m = min(m, (right - left) / 2)
+        return min(max(x, left + m), right - m)
 
     def set_start_pos(self):
         s, a = self.settings, QGuiApplication.primaryScreen().availableGeometry()
@@ -149,6 +191,8 @@ class CeciWindow(QWidget):
         a = self.area()
         off = 120 * self.sprites.scale
         x = a.left() + off if corner == "left" else a.right() - off
+        if self.perch:  # em cima de uma janela: pula para o chão primeiro
+            return self.jump_to(None, self.foot.x(), then=lambda: self.walk_to(x, fast=True))
         self.walk_to(x, fast=True)  # sempre andando (nada de teleporte), mesmo com a caminhada automática desligada
 
     def _jump(self, x):
@@ -261,6 +305,8 @@ class CeciWindow(QWidget):
             return False
         here = kw.pop("here", False)
         if self.sprites.anims.get(aid, {}).get("edge") and not here:
+            if self.perch:
+                return False  # presa à parede da tela: em cima de uma janela não tem parede
             x = self.edge_start(aid)
             if abs(x - self.foot.x()) > 8:
                 # depende da parede: anda até lá primeiro, e só então faz a animação (nada de teleporte)
@@ -328,14 +374,17 @@ class CeciWindow(QWidget):
         now = time.monotonic()
         dt, self.last_move = min(0.1, now - self.last_move), now
         if self.fall_v is not None:
-            self.fall_v += 2600 * dt
-            y = self.foot.y() + self.fall_v * dt
-            g = self.ground()
-            if y >= g:
-                y, self.fall_v = g, None
+            y0 = self.foot.y()
+            y = y0 + self.fall_v * dt + 0.5 * self.air_g * dt * dt  # conta exata: o arco chega à altura calculada
+            self.fall_v += self.air_g * dt
+            if self.air_vx:
+                a = self.area()
+                self.foot.setX(min(max(self.foot.x() + self.air_vx * dt, a.left()), a.right()))
+            surf = self._landing(self.foot.x(), y0, y) if self.fall_v > 0 else None
+            if surf is not None:
+                self._land(soft=self.flight == "pulo", surf=surf)
+            else:
                 self.foot.setY(y)
-                self._land(soft=False)
-            self.foot.setY(y)
         if self.vel:
             x = self.foot.x() + self.vel * dt
             if self.walk_target is not None:
@@ -359,6 +408,162 @@ class CeciWindow(QWidget):
         if not self.vel and self.fall_v is None:
             self.move_timer.stop()
 
+    # ---------- em cima das janelas: pulo, queda e acompanhar ----------
+    def _landing(self, x, y0, y1):
+        """Onde ela toca descendo de y0 até y1: a primeira borda de janela cruzada embaixo dos pés, ou "chao"."""
+        m = 20 * self.sprites.scale
+        hits = [sf for sf in self.surfaces if y0 <= sf.y <= y1 and sf.x0 + m <= x <= sf.x1 - m]
+        if hits:
+            return min(hits, key=lambda sf: sf.y)
+        sc = QGuiApplication.screenAt(QPoint(int(x), int(min(y0, y1)))) or self.screen() \
+            or QGuiApplication.primaryScreen()
+        return "chao" if y1 >= sc.availableGeometry().bottom() + 1 else None
+
+    def _surfaces(self, min_width=60, skip=None):
+        """Onde dá para pousar: bordas de cima das janelas e os itens (botões, imagens...) da página da frente."""
+        out = desktop.surfaces(min_width=min_width, top_margin=self.sit_room())
+        h = self.page.hwnd if self.page else None  # última página lida (pegar a Ceci no mouse tira o navegador da frente)
+        r = desktop.rect_of(h) if h else None
+        if r is not None:
+            wins = desktop.windows()
+            out += [sf for sf in self.page.surfaces(h, min_width, self.area().top() + self.sit_room())
+                    if r.top() < sf.y < r.bottom() - 8 and not self._covered(h, (sf.x0 + sf.x1) / 2, sf.y + 2, wins)]
+        return [sf for sf in out if sf != skip]
+
+    def _covered(self, hwnd, x, y, wins=None):
+        """Alguma janela na frente da janela hwnd tapa o ponto (x, y)?"""
+        for w in desktop.windows() if wins is None else wins:
+            if w.hwnd == hwnd:
+                return False
+            if w.rect.contains(int(x), int(y)):
+                return True
+        return False
+
+    def _set_perch(self, surf):
+        self.perch = surf
+        if self.page:
+            self.page.track = surf.hwnd if surf and surf.el else None
+            self.perch_gen = self.page.gen
+        if surf:
+            self.perch_rect = desktop.rect_of(surf.hwnd)
+            self.perch_t = self.perch_check = time.monotonic()
+            self.perch_timer.start(PERCH_MS)
+        else:
+            self.perch_rect = None
+            self.perch_timer.stop()
+
+    def _fly(self, vy, vx, kind, g=FALL_G, surfaces=None):
+        """Sai do chão (ou da janela): fica na pose de queda da arrastada até tocar em algo."""
+        self.walk_target, self.vel, self.spun = None, 0.0, False
+        self.surfaces = self._surfaces() if surfaces is None else surfaces
+        self.fall_v, self.air_vx, self.air_g, self.flight = vy, vx, g, kind
+        self.play("arrastada", force=True, cut=True, start=self.sprites.anims["arrastada"]["fall"])
+        self._start_move()
+
+    def jump_to(self, surf, x, then=None):
+        """Pulo com gravidade até a borda de cima de uma janela (surf) ou até o chão (surf=None), caindo em x."""
+        if self.dragging or self.fall_v is not None or self.exiting:
+            return False
+        s = self.sprites.scale
+        if surf is not None:
+            m = 40 * s
+            x, ty = min(max(x, surf.x0 + m), surf.x1 - m), surf.y
+        else:
+            a = self.area()
+            x, ty = min(max(x, a.left() + 45 * s), a.right() - 45 * s), a.bottom() + 1
+        up = self.foot.y() - ty            # quanto o alvo está acima dos pés (negativo: embaixo)
+        rise = max(up, 0) + max(45 * s, 24)  # o arco passa um pouco acima do alvo
+        v0 = math.sqrt(2 * JUMP_G * rise)
+        t = v0 / JUMP_G + math.sqrt(2 * (rise - up) / JUMP_G)
+        self._set_perch(None)
+        self.after_land = then
+        self._fly(-v0, (x - self.foot.x()) / t, "pulo", JUMP_G, [surf] if surf else [])
+        return True
+
+    def climb(self):
+        """Sobe sozinha na borda de cima de uma janela à vista (de preferência a da frente): anda até perto
+        e pula. False quando não tem borda livre ao alcance."""
+        if self.perch or self.dragging or self.fall_v is not None or self.exiting:
+            return False
+        s, g = self.sprites.scale, self.ground()
+        opts = [sf for sf in self._surfaces(min_width=int(90 * s))
+                if self.headroom() * 0.5 <= g - sf.y <= MAX_JUMP * s and (sf.el or sf.x1 - sf.x0 >= 150 * s)]
+        if not opts:
+            return False
+        fg = desktop.foreground()
+        items = [sf for sf in opts if sf.el]  # botões, imagens... da página: o mais divertido
+        front = [sf for sf in opts if fg and sf.hwnd == fg.hwnd and not sf.el]
+        pick = random.choice(items if items and random.random() < 0.7 else (front or opts))
+        tx = min(max(self.foot.x(), pick.x0 + 60 * s), pick.x1 - 60 * s)
+        side = -1 if tx < self.foot.x() else 1
+        launch = self.clamp_x(tx - side * 70 * s)  # toma impulso de lado, não pula reto para cima
+
+        def go():
+            sf = self.page.find(pick, tx) if pick.el and self.page else desktop.surface_at(pick.hwnd, tx)
+            if sf and not self.dragging and not self.perch and self.headroom() * 0.5 <= self.ground() - sf.y \
+                    <= MAX_JUMP * s and sf.y >= self.area().top() + self.sit_room():
+                self.jump_to(sf, tx)
+        self.walk_to(launch, on_done=go)
+        return True
+
+    def drop(self):
+        """A borda embaixo dela sumiu (janela fechou, minimizou, maximizou ou foi coberta): cai até o que tiver
+        embaixo (outra janela ou o chão)."""
+        if not self.perch or self.dragging or self.exiting:
+            return
+        old = self.perch
+        self._set_perch(None)
+        self.interaction.emit("caiu")
+        self._fly(0.0, 0.0, "queda", surfaces=[sf for sf in self._surfaces()
+                                               if (sf.el != old.el if old.el else sf.hwnd != old.hwnd)])
+
+    def _perch_tick(self):
+        """Sentada numa janela: vai junto quando você arrasta a janela; cai se ela some, minimiza, maximiza,
+        sobe demais ou fica coberta por outra."""
+        p = self.perch
+        if not p or self.dragging or self.fall_v is not None:
+            return
+        r = desktop.rect_of(p.hwnd)
+        if r is None or not p.el and (desktop.is_maximized(p.hwnd) or r.top() < self.area().top() + self.sit_room()):
+            return self.drop()
+        old, now = self.perch_rect, time.monotonic()
+        if old is not None and (r.left() != old.left() or r.top() != old.top()):
+            dx, dy = r.left() - old.left(), r.top() - old.top()
+            self.perch = p = replace(p, y=p.y + dy, x0=p.x0 + dx, x1=p.x1 + dx)
+            self.foot += QPointF(dx, dy)
+            if self.walk_target is not None:
+                self.walk_target += dx
+            self._place()
+        if self.low() and self.player.aid == "borda" and now > getattr(self, "low_until", now + 1):
+            return self.jump_to(None, self.foot.x())  # cansou de ficar sentada lá em cima: desce
+        resized = old is not None and r.size() != old.size()
+        self.perch_rect = r
+        if p.el:  # num botão/imagem da página: segue quando a página rola; cai quando o item some ou é tapado
+            if now - self.perch_check < 0.2 or not self.page or not self.page.fresh(p.hwnd):
+                return
+            self.perch_check = now
+            if self.page.gen != getattr(self, "perch_gen", self.page.gen):
+                return self.drop()  # trocou de aba/página: o botão onde ela estava não existe mais
+            sf = self.page.find(p, self.foot.x(), max_dy=max(260 * self.sprites.scale, 120))
+            if sf is None or self._covered(p.hwnd, self.foot.x(), sf.y + 2) \
+                    or sf.y < self.area().top() + self.sit_room() or not r.top() < sf.y < r.bottom() - 8:
+                return self.drop()
+            if sf.y != p.y:
+                self.foot += QPointF(0, sf.y - p.y)
+                self._place()
+            self.perch = sf
+            if self.walk_target is not None:
+                self.walk_target = self.clamp_x(self.walk_target)
+            return
+        if resized or now - self.perch_check >= PERCH_CHECK:
+            self.perch_check = now
+            sf = desktop.surface_at(p.hwnd, self.foot.x())
+            if sf is None:
+                return self.drop()
+            self.perch = sf
+            if self.walk_target is not None:
+                self.walk_target = self.clamp_x(self.walk_target)
+
     # ---------- olhos seguindo o mouse ----------
     def update_eye_timer(self):
         on = self.settings["follow_mouse"] and self.isVisible() and not self.player.paused
@@ -375,6 +580,8 @@ class CeciWindow(QWidget):
     def _eye_tick(self):
         if self.dragging or not (self.player.aid == "idle" or self.eyes_on):
             return
+        if self.fall_v is not None or self.low():  # no ar ou sentada no teto baixo: olhar em pé não cabe
+            return self.eyes_off()
         c = QCursor.pos()
         d = QPointF(c) - self._head()
         dist = math.hypot(d.x(), d.y())
@@ -385,15 +592,16 @@ class CeciWindow(QWidget):
         speed = 0.0
         if last and now > last[0]:
             speed = math.hypot(c.x() - last[1].x(), c.y() - last[1].y()) / (now - last[0])
-        if speed > 120:
-            self.eye_last_move = now
+        if speed > 20:  # qualquer mexida (até devagar) conta: enquanto o mouse mexe ela não volta pro idle
+            self.eye_last_move, self.eye_hold = now, None
+        elif self.eyes_on and getattr(self, "eye_hold", None) is None:
+            self.eye_hold = random.uniform(1.0, 3.0)  # mouse parou: ainda fica olhando 1 a 3 s
         if not self.eyes_on and (speed < 1800 or now - getattr(self, "eye_end_t", -99) < EYE_COOLDOWN):
             return
-        if self.eyes_on and now - getattr(self, "eye_last_move", now) > 2.0:
+        if self.eyes_on and now - getattr(self, "eye_last_move", now) > (getattr(self, "eye_hold", None) or 3.0):
             self.eyes_off(back=True)  # mouse parado: volta ao idle
             return
-        if dist < 420 * s * 1.6:
-            self.eyes_last_near = now
+        if self.eyes_on or dist < 420 * s * 1.6:  # começou a olhar: só para quando o mouse parar (longe ou perto)
             eyes = self.sprites.anims["seguir_mouse"]["eyes"]
             if dist < 45 * s:
                 k = None  # cursor no rosto: mantém o olhar atual
@@ -417,8 +625,6 @@ class CeciWindow(QWidget):
                 self._on_frame([idx[0], idx[1], 400], not was)
                 if not was:
                     self.interaction.emit("olhando")
-        elif self.eyes_on and now - self.eyes_last_near > 1.2:
-            self.eyes_off(back=True)
 
     def eyes_off(self, back=False):
         if self.eyes_on:
@@ -520,8 +726,9 @@ class CeciWindow(QWidget):
 
     def _click(self):
         if not self.exiting and not self.dragging:
-            self.interaction.emit("clique")
-            self.interact()
+            aid, cat = self.mood.react("clique", self.player.aid, time.monotonic())
+            self.interaction.emit(cat)
+            self._react(aid)
 
     def dragEnterEvent(self, e):
         if e.mimeData().hasUrls() and not self.exiting:
@@ -541,20 +748,27 @@ class CeciWindow(QWidget):
         self.double_clicked.emit()
 
     def interact(self, talk=False):
+        """Menu/atalho Interagir: reage conforme o humor (feliz, fofa, apaixonadinha... ou brava)."""
+        self._react(self.mood.react("clique", self.player.aid, time.monotonic())[0], talk)
+
+    def _react(self, aid, talk=False):
         self.stop_walk()
-        self.play(random.choice(INTERACT), force=True, talk=talk)
+        if self.low():  # em cima do vídeo flutuante não cabe em pé: só sentada
+            return self.sit_low()
+        self.play(aid, force=True, talk=talk)
 
     def pet(self):
         now = time.monotonic()
-        if now - self.last_pet < 3.5 or self.player.aid in ("carinho", "arrastada", "saida", "entrada"):
+        if now - self.last_pet < 3.5 or self.player.aid in ("arrastada", "saida", "entrada"):
             return
         self.last_pet = now
-        self.stop_walk()
-        self.interaction.emit("carinho")
-        self.play("carinho", force=True)
+        aid, cat = self.mood.react("carinho", self.player.aid, now)  # gostou, derreteu... ou enjoou e ficou brava
+        self.interaction.emit(cat)
+        self._react(aid)
 
     def wake(self):
         if self.player.aid in ("cochilo", "dormindo"):
+            self.mood.woken(time.monotonic())  # acordada: fica mal-humorada uns segundos
             self.interaction.emit("acordando")
             self.player.exit_core()  # acorda e levanta com os quadros do próprio sheet (sem pular de pose)
 
@@ -562,6 +776,8 @@ class CeciWindow(QWidget):
         self.dragging, self.lifted = True, False
         self.spin_pts, self.spun, self.spun_t = [], False, -99.0
         self.walk_target, self.vel, self.fall_v = None, 0.0, None
+        self.air_vx, self.flight, self.after_land = 0.0, None, None
+        self._set_perch(None)
         self.prev = None
         self.interaction.emit("arrastada")
         self.play("arrastada", force=True, cut=True)
@@ -616,28 +832,50 @@ class CeciWindow(QWidget):
         self.dragging = False
         a = self.player.current
         if self.foot.y() < self.ground() - 2 and a and a.get("fall") is not None:
-            self.fall_v = 0.0
-            self.player.jump(a["fall"])  # caindo, segura até tocar o chão
+            # solta no ar: cai até a borda de uma janela embaixo dela ou até o chão
+            self.surfaces = self._surfaces()
+            s, x, y = self.sprites.scale, self.foot.x(), self.foot.y()
+            snap = [sf for sf in self.surfaces if abs(sf.y - y) <= max(40 * s, 30) and sf.x0 + 20 * s <= x <= sf.x1 - 20 * s]
+            if snap:  # soltou com os pés um pouco abaixo da borda (no meio do botão): encaixa em cima dele
+                sf = min(snap, key=lambda sf: abs(sf.y - y))
+                self.foot.setY(sf.y)
+                self.flight = None
+                self._land(soft=True, surf=sf)
+                return
+            self.fall_v, self.air_vx, self.air_g, self.flight = 0.0, 0.0, FALL_G, None
+            self.player.jump(a["fall"])  # caindo, segura até tocar em algo
             self._start_move()
         else:
             self._land(soft=True)
 
-    def _land(self, soft):
-        """Tocou o chão: suave (arrastada até a borda) → último quadro; queda → impacto e recupera."""
-        self.fall_v = None
+    def _land(self, soft, surf=None):
+        """Tocou o chão ou a borda de uma janela: suave (arrastada até a borda, pulo) → último quadro;
+        queda → impacto e recupera."""
+        flight, then = self.flight, self.after_land
+        self.fall_v, self.air_vx, self.air_g, self.flight, self.after_land = None, 0.0, FALL_G, None, None
+        self._set_perch(surf if isinstance(surf, desktop.Surface) else None)
         self.foot.setY(self.ground())
         self._place()
         self.save_pos()
         a = self.player.current
         if self.player.aid == "arrastada" and a:
-            self.interaction.emit("tonta" if getattr(self, "spun", False) else "solta")
+            if flight is None:  # pulo e queda já falaram (ou não precisam): solta/tonta é do arraste
+                self.interaction.emit("tonta" if getattr(self, "spun", False) else "solta")
             self.player.jump(len(a["seq"]) - 1 if soft else a.get("land", len(a["seq"]) - 1))
+        if self.perch and flight != "queda":
+            self.interaction.emit("janela")
+        if self.low():  # teto baixo: senta na hora
+            QTimer.singleShot(500, self.sit_low)
+        if then:
+            QTimer.singleShot(700, then)
 
     # ---------- visibilidade ----------
     def suspend(self, on):
         """Oculta/pausa: nenhum timer fica rodando."""
         self.player.set_paused(on)
-        for t in (self.move_timer, self.fade_timer):
+        for t in (self.move_timer, self.fade_timer, self.perch_timer):
             t.stop()
+        if not on and self.perch:
+            self.perch_timer.start(PERCH_MS)
         self.update_eye_timer()
         self.update_breath()

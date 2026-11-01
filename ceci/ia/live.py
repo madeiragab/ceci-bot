@@ -14,11 +14,11 @@ import time
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from ..sala import texts
-from ..settings import CONFIG_DIR
+from ..settings import SHARED_DIR
 from . import prompts
 from .provider import AIError, Prompt
 
-PATH = os.path.join(CONFIG_DIR, "mente_ia.json")
+PATH = os.path.join(SHARED_DIR, "mente_ia.json")  # igual em todos os PCs (ceci/shared.py)
 REFRESH = 40 * 60      # s entre pedidos
 AFTER_CHAT = 8 * 60    # depois de uma conversa, renova se o último pedido tem mais que isso
 FIRST = 15             # s depois de abrir
@@ -53,6 +53,8 @@ CATS = {
     "conversando": ("puxando assunto do nada", 4),
     "chamando": ("chamando a atenção do usuário", 2),
     "escondendo": ("se escondendo atrás da borda da tela", 2),
+    "janela": ("subiu e sentou em cima de uma janela aberta no PC do usuário", 2),
+    "caiu": ("a janela onde ela tava sentada sumiu/minimizou e ela caiu", 2),
     "saida": ("indo embora (o app vai fechar)", 2),
     "raras": ("fala rara, aleatória e inesperada", 3),
 }

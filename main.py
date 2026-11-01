@@ -9,9 +9,11 @@ from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QSystemTrayIcon
 
+from ceci import desktop, shared
+from ceci.page import Page
 from ceci.behavior import Behavior
 from ceci.command import HELP, CommandBox
-from ceci.ia import make_provider
+from ceci.ia import actions, make_provider, prompts, screen
 from ceci.hotkey import Hotkey
 from ceci.ia.live import Mind
 from ceci.ia.assistant import Assistant
@@ -24,6 +26,7 @@ from ceci.settings import ROOT, Settings
 from ceci.speech import Speech
 from ceci.tray import Tray, build_menu
 from ceci.ui import AnimPanel, SettingsDialog
+from ceci.watch import Watcher
 from ceci.window import CeciWindow
 
 ICON = os.path.join(ROOT, "assets", "icon", "ceci.png")
@@ -74,10 +77,12 @@ class App:
         self.ai = Assistant(make_provider(self.s["ai_provider"], self.s["ai_chain"]), self.sala.store, self.s, clock=self.sala.now)
         self.ai.state.connect(self._ai_state)
         self.ai.answered.connect(self._answered)
-        self.ai.failed.connect(lambda f: self._say(f["anim"], f["say"]))
+        self.ai.failed.connect(lambda f: self._act(f["action"], f["say"]) if f.get("action")
+                               else self._say(f["anim"], f["say"]))
         self.ai.speak.connect(self._say)
         self.ai.local.connect(self.run_local)
         self.shot = self.screen_geom = None
+        self.shot_where = ""  # título da janela da frente quando o print foi tirado
         self.hotkey = Hotkey(qapp)
         self.hotkey.pressed.connect(self.look_screen)
         self._log_start()
@@ -90,6 +95,13 @@ class App:
         self.speech.live = self.mind
         self.beh.mind = self.mind
         self.ai.answered.connect(lambda a: self.mind.maybe_refresh(after_chat=True))
+        self.peeker = mp  # espiada sozinha usa a corrente do cérebro: não disputa com a conversa
+        self.watch = Watcher()
+        self.watch.tab.connect(self._peek)
+        self.page = self.win.page = Page()  # botões, imagens... da página do navegador: ela senta neles
+        self.page.set_on(self.s["perch"])
+        self.page_timer = QTimer(interval=500, timeout=self._page_target)
+        self.page_timer.start()
         self.tray = Tray(self, ICON)
         self.tray.messageClicked.connect(self._toast_clicked)
         self.toast_url, self.toast_action = None, self.tell_activities
@@ -101,12 +113,25 @@ class App:
     def _log_start(self):
         """Diagnóstico ao abrir (sem nenhuma chave): pasta usada, serviços com chave, mensagens no histórico."""
         from ceci.ia import keys
-        from ceci.settings import CONFIG_DIR
+        from ceci.settings import CONFIG_DIR, SHARED_DIR
         try:
             with open(os.path.join(CONFIG_DIR, "ceci.log"), "a", encoding="utf8") as f:
                 f.write(f"{time.strftime('%d/%m %H:%M:%S')} abriu | pasta {CONFIG_DIR} | chaves {sorted(keys.load())} | "
                         f"mensagens {len(self.ai.conv.messages)} | IA {self.ai.provider.is_available()} | "
-                        f"Ctrl+Alt+C {'ok' if self.hotkey.ok else 'ocupado por outro programa'}\n")
+                        f"Ctrl+Alt+C {'ok' if self.hotkey.ok else 'ocupado por outro programa'} | "
+                        f"personalidade em {SHARED_DIR}\n")
+        except OSError:
+            pass
+        QTimer.singleShot(15000, self._log_page)
+
+    def _log_page(self):
+        """Diagnóstico da leitura da página (só se funcionou e quantos itens; nunca os nomes)."""
+        from ceci.settings import CONFIG_DIR
+        p = self.page
+        try:
+            with open(os.path.join(CONFIG_DIR, "ceci.log"), "a", encoding="utf8") as f:
+                f.write(f"{time.strftime('%d/%m %H:%M:%S')} página | ligada {p.on} | "
+                        f"{'erro ' + p.error if p.error else 'ok'} | itens {len(p.items)}\n")
         except OSError:
             pass
 
@@ -123,6 +148,7 @@ class App:
         self.win.update_eye_timer()
         self.win.update_breath()
         self.mind.start()
+        self.watch.set_on(self.s["auto_look"])
         self.sala.start()  # consulta do dia pendente (se houver) e lembretes: depois que ela entra na tela
 
     # --- menu ---
@@ -140,13 +166,39 @@ class App:
         self.speech.say(random.choice(["idle", "curiosa", "conversando", "raras"]), 3, force=True)
 
     def stroll(self):
-        """Caminha até um ponto aleatório da tela (sentido oposto se estiver perto da borda)."""
+        """Caminha até um ponto aleatório da tela ou da janela onde está (sentido oposto se estiver perto da borda)."""
         self.beh.user_activity()
         w = self.win
-        a = w.area()
+        left, right = w.span()
         d = random.uniform(180, 420) * w.sprites.scale / 0.55
-        x = w.foot.x() + (d if w.foot.x() < a.center().x() else -d)
+        x = w.foot.x() + (d if w.foot.x() < (left + right) / 2 else -d)
         w.walk_to(x)
+
+    def set_perch(self, on):
+        """Menu "Sentar nas janelas": desligando com ela lá em cima, ela pula para o chão."""
+        self.s["perch"] = bool(on)
+        self.s.save()
+        self.page.set_on(on)
+        if not on and self.win.perch:
+            self.win.jump_to(None, self.win.foot.x())
+
+    def _page_target(self):
+        """Diz à leitura da página qual é o navegador da frente (desktop.foreground só roda na thread da tela)."""
+        if not (self.page.on and self.win.isVisible() and not self.fs_paused):
+            self.page.fg = None
+            return
+        fg = desktop.foreground()
+        if fg is None:  # a própria Ceci (arrastando, chat) ou a área de trabalho: continua lendo o navegador de antes
+            if self.page.fg and desktop.rect_of(self.page.fg) is None:
+                self.page.fg = None  # fechou ou minimizou
+            return
+        self.page.fg = fg.hwnd if fg.browser else None
+
+    def set_auto_look(self, on):
+        """Menu "Espiar a tela sozinha"."""
+        self.s["auto_look"] = bool(on)
+        self.s.save()
+        self.watch.set_on(bool(on))
 
     def open_panel(self):
         if not self.panel:
@@ -211,18 +263,55 @@ class App:
         box.show_beside(self.win.foot, self.win.sprites.scale, self.win.area())
 
     def _answered(self, a):
-        if a.get("point") and self.screen_geom is not None:
+        if a.get("auto"):  # espiada sozinha (trocou de janela/aba): só comenta, sem andar até o ponto nem fazer nada
+            return self._say(a["anim"], a["balloons"])
+        if a.get("point") and a.get("route") == "tela" and self.screen_geom is not None:
             return self._point(a["point"], a["balloons"])
+        if a.get("action"):
+            return self._act(a["action"], a["balloons"])
         self._say(a["anim"], a["balloons"])
 
+    def _act(self, action, lines):
+        """Pedido que bate com uma ação dela (ceci/ia/actions.py): fala e faz de verdade, com a animação ou o
+        movimento que já existe. A cena segue o tempo dela (não para quando a fala acaba)."""
+        w = self.win
+        aid = actions.ACTIONS[action][1]
+        if not w.isVisible() or w.player.paused or w.exiting or w.dragging or w.fall_v is not None:
+            return self._say(None, lines)
+        self.beh.user_activity()
+        lines = list(lines)
+        if aid == "_subir":
+            if w.perch:
+                lines.append("(Já tô em cima de uma janela, porra.)")
+            elif not self.s["perch"] or not w.climb():
+                lines.append("(Não tem janela com a borda livre pra eu subir agora.)" if self.s["perch"]
+                             else "(\"Sentar nas janelas\" tá desligado no menu.)")
+        elif aid == "_descer":
+            if w.perch:
+                w.jump_to(None, w.foot.x())
+        elif aid == "_passear":
+            self.stroll()
+        elif aid == "_acordar":
+            w.wake()
+        else:
+            w.stop_walk()
+            self.speech.muted = aid  # a fala é a resposta, não a automática da animação
+            self.hold = None
+            if w.sprites.anims[aid].get("edge") and w.perch:  # esconder na parede: desce da janela antes
+                w.jump_to(None, w.foot.x(), then=lambda: w.play(aid, force=True))
+            else:
+                w.play(aid, force=True)
+        self.speech.say_many(lines)
+
     def _point(self, pt, lines):
-        """Resposta sobre a tela com [aponta]: anda até embaixo da coisa e aponta enquanto fala."""
+        """Resposta sobre a tela com [aponta]: anda até embaixo da coisa (no chão ou na borda da janela onde
+        está) e aponta enquanto fala."""
         w, g = self.win, self.screen_geom
         x = g.left() + pt[0] * g.width()
-        if not w.isVisible() or w.player.paused or w.exiting or w.dragging:
+        if not w.isVisible() or w.player.paused or w.exiting or w.dragging or w.fall_v is not None:
             return self._say(None, lines)
-        a, s = w.area(), w.sprites.scale
-        x = max(a.left() + 90 * s, min(a.right() - 90 * s, x))
+        s = w.sprites.scale
+        x = w.clamp_x(x, 90 * s)
         self.speech.say_many(lines)
         if abs(x - w.foot.x()) < 40 * s:
             self.speech.muted = "apontando"
@@ -231,10 +320,11 @@ class App:
 
     def look_screen(self):
         """Ctrl+Alt+C: print da tela (antes da caixinha aparecer) e caixinha pra perguntar; Enter vazio = comenta."""
-        from ceci.ia import screen
         if self.win.exiting:
             return
         self.beh.user_activity()
+        fg = desktop.foreground()
+        self.shot_where = fg.title if fg else ""
         self.shot, self.screen_geom = screen.grab()
         if self.box:
             self.box.close()
@@ -248,12 +338,31 @@ class App:
 
     def _screen_message(self, text):
         """Caixinha do Ctrl+Alt+C: Enter vazio ou pergunta sobre a tela leva o print; o resto é conversa normal."""
-        from ceci.ia import prompts
-        from ceci.sala.texts import norm
-        if not text or prompts.ABOUT_SCREEN.search(norm(text)):
-            return self.ai.look(self.shot, text)
+        n = texts.norm(text)
+        if not text or prompts.ABOUT_SCREEN.search(n) or prompts.SCREEN_ASK.search(n):
+            return self.ai.look(self.shot, text, self.shot_where)
         self.shot = None
         self.command(text)
+
+    def _look_now(self, text):
+        """Mensagem que pede pra ela olhar a tela ("olha isso aqui", "tá vendo esse erro?"): print tirado agora,
+        nunca a descrição de um print antigo."""
+        fg = desktop.foreground()
+        shot, self.screen_geom = screen.grab()
+        self.ai.look(shot, text, fg.title if fg else "")
+
+    def _peek(self, w):
+        """Você ficou numa janela ou aba nova: ela olha e solta um comentário curto (se estiver à vista e
+        ninguém estiver falando com ela)."""
+        if (not self.s["auto_look"] or not self._can_react() or self.box or self.ai.busy or self.ai.peeking
+                or self.speech.bubble.active() or self.win.fall_v is not None):
+            return
+        shot, geom = screen.grab(w.rect.center())
+        where = f'a aba "{w.title}" no navegador' if w.browser else \
+            f'a janela "{w.title}" ({w.exe.removesuffix(".exe") or "um programa"})'
+        if self.ai.peek(shot, where, self.peeker):
+            self.screen_geom = geom
+            self._ai_anim("observando")
 
     def drop_files(self, paths):
         """Arquivo solto em cima dela: ela lê (só .txt e .md) e comenta."""
@@ -263,6 +372,9 @@ class App:
 
     def command(self, text):
         self.speech.cut()  # o que você digitou tem prioridade sobre o que ela estava falando
+        if not self.ai.busy and prompts.SCREEN_ASK.search(texts.norm(text)):
+            # pede pra olhar a tela: print na hora (depois que a caixinha some), nada de print velho
+            return QTimer.singleShot(150, lambda: self._look_now(text))
         self.ai.handle(text)  # roteador: comando local, pergunta com dados da Sala Virtual ou conversa
 
     def _ai_state(self, st):
@@ -491,6 +603,9 @@ class App:
             return
         self.beh.stop()
         self.fs_timer.stop()
+        self.watch.set_on(False)
+        self.page_timer.stop()
+        self.page.close()
         self.sala.shutdown()
         self.ai.close()
         self.hotkey.close()
@@ -512,10 +627,13 @@ class App:
 
         def ready():  # só corre depois de terminar de falar o tchau
             QTimer.singleShot(self.speech.remaining_ms(), go)
-        if abs(w.foot.x() - target) > 20:
-            w.walk_to(target, on_done=ready, fast=True)  # sempre andando até o canto
-        else:
-            ready()
+        def walk_out():
+            if abs(w.foot.x() - target) > 20:
+                w.walk_to(target, on_done=ready, fast=True)  # sempre andando até o canto
+            else:
+                ready()
+        if not (w.perch and w.jump_to(None, w.foot.x(), then=walk_out)):  # em cima de uma janela: desce antes
+            walk_out()
 
 
 def already_running(name="CeciBot.SingleInstance"):
@@ -533,6 +651,7 @@ def main():
         return
     if sys.platform == "win32":
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("CeciBot")
+    shared.migrate()  # memória (conversa, humor, personalidade) na pasta do OneDrive: igual em todos os PCs
     qapp = QApplication(sys.argv)
     qapp.setQuitOnLastWindowClosed(False)
     qapp.setWindowIcon(QIcon(ICON))

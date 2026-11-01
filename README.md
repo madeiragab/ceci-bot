@@ -31,6 +31,8 @@
   - **Mouse**: os olhos seguem o cursor quando você mexe rápido.
   - **Clique**: clicar nela (cabeça ou corpo) é o mesmo que "Interagir": ela acena, fica feliz, manda beijinho ou coração.
   - **Carinho**: passe o mouse para lá e para cá sobre a cabeça dela algumas vezes, sem clicar.
+- **Senta nas janelas e na página**: sobe nas janelas abertas e também nos botões, imagens e campos da página do navegador (lidos pelo UI Automation do Windows, só leitura: ela nunca clica nem digita). Acompanha quando a janela anda ou a página rola, e cai quando o lugar some.
+- **Mesma personalidade em todos os PCs**: com OneDrive, a personalidade e o humor dela ficam numa pasta sincronizada. A conversa é de cada PC.
 - **Senta na barra de tarefas**: quando senta na beirada, fica apoiada no topo da barra com as pernas balançando por cima dela, em vez de flutuar.
 - **Pode ser arrastada**: ela fica pendurada enquanto você segura. Solta no ar, ela cai, sente o impacto e se levanta. Levada até a borda de baixo, pousa na hora.
 - **Transições suaves**: dissolve entre os quadros e entre as animações, sem teleportes. As atividades repetem só o "miolo" (ex.: folhear o livro) e só guardam as coisas quando ela vai fazer outra coisa.
@@ -94,7 +96,13 @@ A barrinha do clique duplo passa por um roteador: **comando registrado** (ex.: "
 
 **Situação do provedor**: o Gemini Web **não está conectado**. O `robots.txt` do gemini.google.com fecha as páginas do chat para automação e os Termos do Google tratam esse acesso como abuso, então a Ceci não automatiza a página. O núcleo funciona com qualquer provedor que implemente `AIProvider` (`ceci/ia/provider.py`). Sem provedor, os comandos continuam, perguntas sobre atividades são respondidas com os dados locais e a conversa avisa que não há IA conectada.
 
-**Ctrl+Alt+C**: a Ceci olha a sua tela (print só na hora, só pra IA que enxerga imagem) e comenta ou responde o que você perguntar sobre ela. Arraste um **.txt/.md** em cima dela pra ela ler.
+**Ctrl+Alt+C**: a Ceci olha a sua tela (print só na hora, só pra IA que enxerga imagem) e comenta ou responde o que você perguntar sobre ela. Pedir na conversa ("olha isso aqui", "tá vendo esse erro?") também tira um print na hora; prints antigos ficam marcados como velhos, então ela não mistura a tela de agora com a de antes. Arraste um **.txt/.md** em cima dela pra ela ler.
+
+**Espiar a tela sozinha** (ligada; desliga no menu): quando você para 5 s numa janela ou aba nova (navegador ou qualquer programa do PC), ela espia e solta um comentário curto. No máximo uma vez a cada 3 minutos, e nunca em aba anônima, de login/senha, banco, e-mail, conversa (WhatsApp, Telegram, Discord...) ou gerenciador de senha. Ela só lê o título da janela da frente; o print fica só na memória.
+
+**Pedir pra ela fazer algo**: "então dorme, linda", "toma um café aí", "sobe na janela", "brinca com o Bowie"... O pedido é comparado com o que ela sabe fazer (dormir, café, ler, gato, acenar, dançar, programar, se espreguiçar, se esconder, sentar, subir/descer da janela, passear) e ela faz de verdade. O que não existe ela diz que não faz.
+
+**Sentar nas janelas** (ligada): ela pula para a borda de cima das janelas abertas, senta com as pernas balançando, vai junto quando você arrasta a janela e cai quando a janela fecha, minimiza, maximiza ou fica coberta. Em cima do vídeo flutuante (colado no topo da tela) ela fica sentada. Soltar ela no ar em cima de uma janela também funciona.
 
 ## 🖼️ Galeria
 
@@ -135,14 +143,14 @@ O script gera `%LOCALAPPDATA%\Programs\Ceci Bot\Ceci Bot.exe` com PyInstaller e 
 
 | Ação | O que acontece |
 |---|---|
-| Mexer o mouse rápido perto dela | Ela acompanha o cursor com o olhar. Cada direção dura no mínimo 1,5 s, e depois ela espera 10 s para voltar a seguir. |
-| Clicar nela (cabeça ou corpo) | Interagir: acena, fica feliz, manda beijinho ou coração, e fala uma frase de clique |
+| Mexer o mouse rápido perto dela | Ela acompanha o cursor com o olhar enquanto ele mexer (perto ou longe) e continua olhando 1 a 3 s depois que ele para. Cada direção dura no mínimo 1,5 s, e depois ela espera 10 s para voltar a seguir. |
+| Clicar nela (cabeça ou corpo) | Interagir: reage conforme o humor (acena, fica feliz, fofa, apaixonadinha, manda beijinho ou coração, fica confusa) e fala uma frase de clique. Se você não para de clicar, interrompe o que ela tava fazendo ou acabou de acordá-la, pode ficar brava |
 | Clique duplo nela | Caixinha para digitar uma pergunta (atividades, prazo, hoje, resumo...) |
-| Passar o mouse várias vezes pela cabeça (vai e volta) | Carinho |
-| Clicar e arrastar | Fica pendurada. Ao soltar, cai e pousa. |
+| Passar o mouse várias vezes pela cabeça (vai e volta) | Carinho: ela reage conforme o humor (gosta, fica feliz, apaixonadinha ou fofa); carinho demais, na hora errada ou logo depois de acordar, ela fica brava. Dormindo, só acorda |
+| Clicar e arrastar | Fica pendurada. Ao soltar, cai e pousa (na borda de cima de uma janela, se tiver uma embaixo). |
 | Girar ou sacudir enquanto arrasta | Reclama ("VOU VOMITAR!") e pousa tonta |
-| Clique direito | Menu: Interagir, Falar algo, Passear, Ver animações, Mover para outro canto, Alterar tamanho, Minhas atividades, Resumo da faculdade, Conferir Sala Virtual agora, Pausar animações, Configurações, Ocultar, Sair |
-| Ícone na bandeja | Mostrar, Ocultar, Pausar animações, Configurações, Sair |
+| Clique direito | Menu: Interagir, Falar algo, Passear, Ver animações, Mover para outro canto, Alterar tamanho, Olhar minha tela, Minhas atividades, Resumo da faculdade, Conferir Sala Virtual agora, Abrir chat, Pausar animações, Sentar nas janelas, Espiar a tela sozinha, Configurações, Ocultar, Sair |
+| Ícone na bandeja | Mostrar, Ocultar, Pausar animações, Sentar nas janelas, Espiar a tela sozinha, Configurações, Sair |
 
 ## ⚙️ Configurações
 
@@ -216,11 +224,15 @@ python tests/sala_app_test.py # a Ceci reage à consulta com as animações e fa
 python tests/live_test.py     # falas e vontades geradas pela IA (provedor falso)
 python tests/chain_test.py    # corrente de provedores com servidor falso
 python tests/ia_test.py       # IA: roteador, contexto, dados, falhas e animações com um provedor falso
+python tests/screen_test.py   # sem print velho, arquivo só quando perguntam dele, espiada no navegador
+python tests/actions_test.py  # "então dorme, linda" → ela dorme de verdade (pedido comparado com as ações dela)
+python tests/desktop_test.py  # janelas do Windows: bordas livres, DPI (abre janelas de verdade)
+python tests/perch_test.py    # sentar nas janelas de verdade: pousa, segue, cai, pula
 ```
 
 Os testes da Sala Virtual usam um Moodle de mentira em `127.0.0.1` (`tests/fake_moodle.py`) com dados fictícios. Nenhuma conta real é usada.
 
-Os testes rodam sem abrir janela (`QT_QPA_PLATFORM=offscreen`) e usam uma pasta de configurações temporária.
+Os testes rodam sem abrir janela (`QT_QPA_PLATFORM=offscreen`) e usam uma pasta de configurações temporária. `desktop_test` e `perch_test` precisam da tela de verdade: abrem janelas de teste de outro processo (sempre no topo, sem pegar foco) e fecham no fim.
 
 ## 📊 Desempenho (medido)
 
@@ -243,6 +255,8 @@ main.py              # app: início, menu, bandeja, tela cheia, fechar animado
 ceci/                # engine, janela, rotina, sprites, configurações, UI
 ceci/sala/           # Sala Virtual: login, leitura do Moodle, SQLite, lembretes, falas
 ceci/command.py      # caixinha do clique duplo
+ceci/desktop.py      # janelas do Windows, só lendo: a da frente e as bordas livres para sentar
+ceci/watch.py        # espiar o navegador quando você troca de aba
 ceci/ia/             # IA: roteador, personalidade, contexto, dados da Sala Virtual, provedor, chat
 assets/              # sprites recortados, frames.json, animations.json, falas.json, ícone
 assetsoriginal/      # spritesheets originais (fundo magenta)

@@ -19,7 +19,15 @@ CHUNK = 3000      # tamanho de cada trecho
 STOP = set("""a o e é de da do das dos que em no na nos nas um uma uns umas pra para por com sem se me te
 lhe eu tu ele ela nós vós eles elas cê voce você isso esse essa este esta aquilo aquele aquela qual quais
 quando onde como porque pq mais menos muito muita ja já não nao sim mas ou foi era ser ter tem tinha
-arquivo texto lê le ler fala falar diz dizer sobre achou acha coisa coisas aí ai ali aqui lá la tá ta""".split())
+arquivo texto lê le ler fala falar diz dizer sobre achou acha coisa coisas aí ai ali aqui lá la tá ta
+oi ola olá boa bom noite dia tarde tudo bem gente cara mano mana hoje agora ontem amanhã amanha vida tempo
+vez sempre nunca ainda nada legal todo toda todos fazer faz fez vai vou estar está estou gosta gosto acho
+quer quero pode posso sabe sei ver olha olhe linda lindo lindinha fofa obrigado obrigada obg valeu beleza
+então entao dorme dormir tchau ceci kkk kkkk haha""".split())
+# pergunta (ou pedido) de verdade: só aí o arquivo volta como consulta
+ASK = re.compile(r"\?|\b(?:o que|quem|qual|quais|quando|quanto|quantos|quantas|como|onde|porque|oq|cade|explica|"
+                 r"resume|cita|lista|mostra|procura|conta|diga|me fala|me diz|fala d[aoe])\b")
+REF = re.compile(r"\b(?:arquivo|texto|documento|resumo|trecho|capitulo|nele|nela|la diz|ali diz)\b")
 
 
 def read(path):
@@ -53,11 +61,21 @@ def terms(question):
     return [w for w in re.findall(r"\w+", norm(question)) if len(w) >= 3 and w not in STOP]
 
 
+def relevant(text, question, q=None):
+    """A mensagem fala do arquivo? Cita o arquivo, ou é uma pergunta com palavra (inteira, ≥ 4 letras) que está
+    nele. "Boa noite ceci" e "olha que lindinha" não puxam o arquivo de volta."""
+    nq = norm(question)
+    if REF.search(nq):
+        return True
+    words = set(re.findall(r"\w+", norm(text)))
+    return bool(ASK.search(nq)) and any(len(t) >= 4 and t in words for t in (terms(question) if q is None else q))
+
+
 def excerpt(text, question, limit=LIMIT, generic=True):
     """(texto que vai para a IA, descrição do recorte ou "" quando foi inteiro).
     generic=False (perguntas depois da primeira): pergunta que não fala de nada do arquivo → ("", "")."""
     q = terms(question)
-    if not generic and not any(t in norm(text) for t in q):
+    if not generic and not relevant(text, question, q):
         return "", ""
     if len(text) <= limit:
         return text, ""

@@ -101,7 +101,7 @@ check("fala: as da IA (uma vez cada), depois a pronta", got == ["Puta merda, sá
 
 # 4. rotina: o que ela tá com vontade fica 3x mais provável
 anims = {"cafe": {"auto": 2}, "gato": {"auto": 2}}
-b = NS(win=NS(sprites=NS(anims=anims)), s={"specials": False, "walk": False}, recent=[], last_special=0,
+b = NS(win=NS(sprites=NS(anims=anims), perch=None), s={"specials": False, "walk": False}, recent=[], last_special=0,
        last_user=time.monotonic(), mind=m)
 import random  # noqa: E402
 seen = []
@@ -203,7 +203,7 @@ n = len(out)
 ai.look("QUJD", "")
 wait(lambda: len(out) > n)
 p = fake2.calls[-1]
-check("tela: o print vai só nesse pedido, com a instrução de olhar", p.image == "QUJD" and "OLHAR a tela" in p.message)
+check("tela: o print vai só nesse pedido, com a instrução de olhar", p.image == "QUJD" and "PRINT NOVO" in p.message)
 check("tela: [aponta: X, Y] vira ponto (0–1) e some do texto",
       out[-1]["point"] == (0.12, 0.04) and "aponta" not in out[-1]["text"] and "🖥️" in ai.conv.messages[-2]["text"])
 fake2.replies[:] = ["[neutra] Beleza."]
@@ -212,7 +212,7 @@ wait(lambda: len(out) > n + 1)
 check("tela: a mensagem seguinte não leva o print de novo", fake2.calls[-1].image is None)
 import main as M  # noqa: E402
 calls_box = []
-stub = NS(shot="QUJD", ai=NS(look=lambda img, t: calls_box.append(("tela", img, t))),
+stub = NS(shot="QUJD", shot_where="", ai=NS(look=lambda img, t, where="": calls_box.append(("tela", img, t))),
           command=lambda t: calls_box.append(("conversa", t)))
 for t in ("", "o que é isso aqui?", "lê esse erro", "então dorme linda", "mandei foi bem, eu matei ele"):
     M.App._screen_message(stub, t)
