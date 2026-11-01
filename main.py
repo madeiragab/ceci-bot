@@ -241,10 +241,19 @@ class App:
         box = self.box = CommandBox()
         box.allow_empty = True
         box.setPlaceholderText("pergunta da tela (Enter = ela comenta)")
-        box.submitted.connect(lambda t: self.ai.look(self.shot, t))
+        box.submitted.connect(self._screen_message)
         box.destroyed.connect(lambda *_: self.box is box and setattr(self, "box", None))
         box.show_beside(self.win.foot, self.win.sprites.scale, self.win.area())
-        self.speech.say("sv_info", 3, force=True, text="Tô olhando, pergunta aí. Enter vazio que eu comento.")
+        self.speech.say("sv_info", 3, force=True, text="Pergunta da tela ou Enter vazio que eu comento.")
+
+    def _screen_message(self, text):
+        """Caixinha do Ctrl+Alt+C: Enter vazio ou pergunta sobre a tela leva o print; o resto é conversa normal."""
+        from ceci.ia import prompts
+        from ceci.sala.texts import norm
+        if not text or prompts.ABOUT_SCREEN.search(norm(text)):
+            return self.ai.look(self.shot, text)
+        self.shot = None
+        self.command(text)
 
     def drop_files(self, paths):
         """Arquivo solto em cima dela: ela lê (só .txt e .md) e comenta."""

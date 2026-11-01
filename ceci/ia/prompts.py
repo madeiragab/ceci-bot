@@ -37,6 +37,10 @@ SCREEN = """O usuário apertou o atalho pra você OLHAR a tela dele agora: a ima
 você enxerga (programa, texto, código, vídeo, jogo...). Não invente o que não dá pra ler. Você não clica nem
 digita nada: só olha e fala. Se for útil apontar uma coisa específica, termine com uma linha exatamente assim:
 [aponta: X, Y] com X e Y de 0 a 1000 (0,0 = canto de cima à esquerda; 1000,1000 = canto de baixo à direita)."""
+# mensagem da caixinha do Ctrl+Alt+C que fala da tela (o resto é conversa normal, sem mandar o print)
+ABOUT_SCREEN = re.compile(r"\b(?:tela|isso|isto|aqui|esse|essa|este|esta|olha|olhe|ve|veja|le|leia|lendo|janela|aba|site|"
+                          r"pagina|codigo|erro|print|imagem|foto|video|jogo|filme|serie|musica|programa|app|"
+                          r"o que (?:e|eh|tem|ta|esta)|qual (?:e|eh)|onde|explica|traduz|resolve|corrige)\b")
 POINT = re.compile(r"\[\s*aponta\s*:\s*(\d{1,4})\s*[,;]\s*(\d{1,4})\s*\]", re.I)
 
 # etiqueta pedida ao modelo → animação que já existe (nenhum sprite novo)

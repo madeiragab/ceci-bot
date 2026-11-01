@@ -11,8 +11,8 @@ from ..settings import CONFIG_DIR
 
 PATH = os.path.join(CONFIG_DIR, "conversa.json")
 KEEP = 400          # mensagens guardadas no histórico
-RECENT = 8          # mensagens que vão para o modelo
-RECENT_CHARS = 600  # cada uma, no máximo
+RECENT = 16          # mensagens que vão para o modelo
+RECENT_CHARS = 1000  # cada uma, no máximo
 STATE = {"session_id": None, "last_topic": None, "last_keys": [], "last_module": None, "last_at": None,
          "personality_key": None, "provider": None, "file": None}
 
@@ -52,7 +52,12 @@ class Conversation:
                 break  # começo da conversa atual
             if m.get("error") or m.get("route") == "local":
                 continue
-            t = m["text"] if len(m["text"]) <= chars else m["text"][:chars - 1] + "…"
+            t = m["text"]
+            if m.get("route") == "tela":  # o print foi só naquela mensagem: o modelo precisa saber que não tem mais
+                t = "[nesta mensagem mandei um print da tela; você não está mais vendo ele] " + t.replace("🖥️", "").strip()
+            elif m.get("route") == "arquivo":
+                t = "[mandei o arquivo " + t.replace("📄", "").strip() + "]"
+            t = t if len(t) <= chars else t[:chars - 1] + "…"
             out.append((m["role"], t))
             if len(out) >= n:
                 break

@@ -210,6 +210,14 @@ fake2.replies[:] = ["[neutra] Beleza."]
 ai.handle("valeu")
 wait(lambda: len(out) > n + 1)
 check("tela: a mensagem seguinte não leva o print de novo", fake2.calls[-1].image is None)
+import main as M  # noqa: E402
+calls_box = []
+stub = NS(shot="QUJD", ai=NS(look=lambda img, t: calls_box.append(("tela", img, t))),
+          command=lambda t: calls_box.append(("conversa", t)))
+for t in ("", "o que é isso aqui?", "lê esse erro", "então dorme linda", "mandei foi bem, eu matei ele"):
+    M.App._screen_message(stub, t)
+check("caixinha da tela: print só com Enter vazio ou pergunta sobre a tela; o resto é conversa sem imagem",
+      [c[0] for c in calls_box] == ["tela", "tela", "tela", "conversa", "conversa"] and stub.shot is None)
 from ceci.hotkey import MOD_ALT, MOD_CONTROL, MOD_SHIFT, Hotkey  # noqa: E402
 hk = Hotkey(qa, key="Z", mods=MOD_CONTROL | MOD_ALT | MOD_SHIFT, ident=0xBEEF)  # outra tecla: não briga com a Ceci aberta
 check("atalho global: registra no Windows e solta", hk.ok and (hk.close() or not hk.ok))
